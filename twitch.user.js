@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141017-0248
+// @version     20141024-2313
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -11,8 +11,8 @@
 
 
 /*******************************************************************************
-creation: 2012/11/17 00:00
-  update: 2014/10/17 02:48
+creation: 2012-11-17 00:00 +0000
+  update: 2014-10-24 23:13 +0000
 *******************************************************************************/
 
 
