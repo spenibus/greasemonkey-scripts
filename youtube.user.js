@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20141024-2313
+// @version     20141025-0044
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2010-11-12 00:00 +0000
-  update: 2014-10-24 23:13 +0000
+  update: 2014-10-25 00:44 +0000
 
 TODO
    - handle "protected" videos, maybe
@@ -434,8 +434,10 @@ function wmode() {
    playerNode.setAttribute('wmode', 'direct');
 
 
-   // show success
-   var box = SGL.displayBox();
-   box.set('<span style="color:green;">wm</span>');
+   // show success (watch page only)
+   if(page[1] == 'watch') {
+      var box = SGL.displayBox();
+      box.set('<span style="color:green;">wm</span>');
+   }
 }
 window.addEventListener('load', wmode, false);
