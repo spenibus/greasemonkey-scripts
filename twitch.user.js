@@ -486,6 +486,10 @@ function archives() {
       +'#spenibusVideoLinkBox > div:hover > div {'
          +'background-color:#FDA;'
       +'}'
+      // chunk audio muted
+      +'#spenibusVideoLinkBox .muted {'
+         +'color:#A00;'
+      +'}'
    );
 
 
@@ -623,6 +627,11 @@ function archives() {
          var chunkDuration    = data.chunks[data.qualityRef][chunkId].length;
          var chunkDurationStr = durationFormat(chunkDuration);
 
+         // is chunk audio muted ?
+         var chunkMuted = data.chunks[data.qualityRef][chunkId].upkeep == 'fail'
+            ? true
+            : false;
+
          // chunk title
          var chunkTitle = 'twitch'
             +' - '+data.info.channel.name
@@ -648,6 +657,7 @@ function archives() {
             +'<div>'+(parseInt(chunkId)+1)+'</div>'
             +'<div>'+chunkStartStr+'</div>'
             +'<div>'+chunkDurationStr+'</div>'
+            +'<div>'+(chunkMuted ? '<span class="muted">muted</span>' : '')+'</div>'
             +linksHtml
          +'</div>';
 
