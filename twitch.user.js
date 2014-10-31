@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141031-2228
+// @version     20141031-2237
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-10-31 22:28 +0000
+  update: 2014-10-31 22:37 +0000
 *******************************************************************************/
 
 
@@ -688,7 +688,7 @@ function archives() {
             +'<div>A<br/>'+data.chunksCount+'</div>'
             +'<div>start<br/><a href="'+data.chunkUrl+'">cfg</a></div>'
             +'<div>duration<br/>'+data.durationStr+'</div>'
-            +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunks[data.qualityRef].length+'</div>'
+            +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunksCount+'</div>'
          +'</div>'
          +html
       );
