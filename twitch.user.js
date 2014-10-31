@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141028-1825
+// @version     20141031-2228
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-10-28 18:25 +0000
+  update: 2014-10-31 22:28 +0000
 *******************************************************************************/
 
 
@@ -26,11 +26,23 @@ var loc = document.location;
 
 
 /********************************************************************* config */
-var cfg = {
-   channel : (function(){
-      var m = loc.pathname.match(/^\/([^\/]+)/);
-      return m ? m[1].toLowerCase() : null;
-   })(),
+var cfg = {};
+
+
+
+
+/*******************************************************************************
+********************************************************************************
+********************************************************************************
+******************************************************************* functions */
+
+
+
+
+/*********************************************************** get channel name */
+function getChannel() {
+   var m = loc.pathname.match(/^\/([^\/]+)/);
+   return m ? m[1].toLowerCase() : null;
 }
 
 
@@ -87,6 +99,8 @@ window.addEventListener('load', reloadButtons, false);
 ***************************************************************** quick links */
 function quickLinks() {
 
+   var channel = getChannel();
+
    SGL.css(''
       // hide by default
       +'#spenibusQuickLinks {'
@@ -103,9 +117,9 @@ function quickLinks() {
    var box = SGL.displayBox('spenibusQuickLinks');
    box.set(''
       +'<div>'
-         +'<a href="http://www.twitch.tv/'+cfg.channel+'/popout">popout</a>'
+         +'<a href="http://www.twitch.tv/'+channel+'/popout">popout</a>'
          +' &bull; '
-         +'<a href="http://www.twitch.tv/'+cfg.channel+'/chat">chat</a>'
+         +'<a href="http://www.twitch.tv/'+channel+'/chat">chat</a>'
       +'</div>'
    );
 }
@@ -122,7 +136,7 @@ function live() {
 
    //***************************************************************** some vars
    var vars = {
-      channel : cfg.channel,
+      channel : getChannel(),
       isLive  : false,
       viewers : 0,
       quality : {
@@ -470,21 +484,17 @@ function archives() {
       +'#spenibusVideoLinkBox > div + div > div {'
          +'border-top:1px solid #888;'
       +'}'
-      // cell: chunk id
-      +'#spenibusVideoLinkBox > div > div:nth-child(1) {'
+      // cells default alignment: right
+      +'#spenibusVideoLinkBox > div > div {'
          +'text-align:right;'
-      +'}'
-      // cell: duration
-      +'#spenibusVideoLinkBox > div > div:nth-child(3) {'
-         +'text-align:right;'
-      +'}'
-      // hide extra text in link
-      +'#spenibusVideoLinkBox > div > div a .extra {'
-         +'display:none;'
       +'}'
       // row hover
       +'#spenibusVideoLinkBox > div:hover > div {'
          +'background-color:#FDA;'
+      +'}'
+      // hide extra link text
+      +'#spenibusVideoLinkBox .extra {'
+         +'display:none;'
       +'}'
       // chunk audio muted
       +'#spenibusVideoLinkBox .muted {'
@@ -500,7 +510,9 @@ function archives() {
 
    //******************************************************************* process
    // archive data holder
-   var data = {};
+   var data = {
+      'chunksMutedCount' : 0,
+   };
 
 
    //********************************** start the chain reaction: get archive id
@@ -609,7 +621,6 @@ function archives() {
       // archive chunks count
       data.chunksCount = data.chunks[data.qualityRef].length;
 
-
       // init output buffer
       var html = '';
 
@@ -631,6 +642,11 @@ function archives() {
          var chunkMuted = data.chunks[data.qualityRef][chunkId].upkeep == 'fail'
             ? true
             : false;
+
+         // count muted chunks
+         if(chunkMuted) {
+            ++data.chunksMutedCount;
+         }
 
          // chunk title
          var chunkTitle = 'twitch'
@@ -672,6 +688,7 @@ function archives() {
             +'<div>A<br/>'+data.chunksCount+'</div>'
             +'<div>start<br/><a href="'+data.chunkUrl+'">cfg</a></div>'
             +'<div>duration<br/>'+data.durationStr+'</div>'
+            +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunks[data.qualityRef].length+'</div>'
          +'</div>'
          +html
       );
