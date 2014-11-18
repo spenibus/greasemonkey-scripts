@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141031-2237
+// @version     20141118-1246
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-10-31 22:37 +0000
+  update: 2014-11-18 12:46 +0000
 *******************************************************************************/
 
 
@@ -88,7 +88,7 @@ function reloadButtons() {
       box.node.appendChild(button);
    }
 }
-window.addEventListener('load', reloadButtons, false);
+window.addEventListener('DOMContentLoaded', reloadButtons, false);
 
 
 
@@ -123,7 +123,7 @@ function quickLinks() {
       +'</div>'
    );
 }
-window.addEventListener('load', quickLinks, false);
+window.addEventListener('DOMContentLoaded', quickLinks, false);
 
 
 
@@ -411,7 +411,7 @@ function live() {
       );
    }
 }
-window.addEventListener('load', live, false);
+window.addEventListener('DOMContentLoaded', live, false);
 
 
 
@@ -694,4 +694,4 @@ function archives() {
       );
    }
 }
-window.addEventListener('load', archives, false);
+window.addEventListener('DOMContentLoaded', archives, false);
