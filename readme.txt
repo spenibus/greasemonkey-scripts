@@ -1,6 +1,12 @@
 My greasemonkey scripts.
 
 
+Hitbox
+   - archive download links
+      - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
+      - most of the link text is hidden for readability but remains useable regarding the previous point
+
+
 Twitch
    - quick links to popout and chat
    - live playlist links
@@ -18,9 +24,3 @@ Youtube
    - sets wmode of embedded flash player to "direct"
       - accelerated video rendering
       - no hiccup on fullscreen switching
-
-
-Hitbox
-   - archive download links
-      - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
-      - most of the link text is hidden for readability but remains useable regarding the previous point
