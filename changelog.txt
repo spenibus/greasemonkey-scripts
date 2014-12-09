@@ -1,0 +1,60 @@
+2014-12-08 21:00 +0000
+- twitch: added rudimentary /v/ url support
+- twitch: added fallback for /v/ url when /b/ is available as referrer
+- added changelog
+
+
+2014-11-22 02:29 +0000
+- updated readme again
+
+
+2014-11-22 02:28 +0000
+- updated readme
+
+
+2014-11-22 02:27 +0000
+- added hitbox, for archive download
+
+
+2014-11-18 12:51 +0000
+- twitch/youtube: updated event listeners to DOMContentLoaded
+
+
+2014-10-31 22:37:35 +0000
+- fixed minor var misuse
+
+
+2014-10-31 22:31 +0000
+- added muted chunks count
+- css update
+- rewrote channel name acquisition
+
+
+2014-10-30 04:10 +0000
+- youtube: modified link text format
+
+
+2014-10-28 18:27 +0000
+- twitch: updated version number, it was forgotten in previous commit
+
+
+2014-10-28 18:24 +0000
+- twitch: added notification for muted video chunks
+
+
+2014-10-25 00:47 +0000
+- youtube: show wmode notification on watch page only
+
+
+2014-10-24 23:20 +0000
+- added youtube script
+- updated version numbering to use UTC
+- updated readme
+
+
+2014-10-18 03:32 +0000
+- readme update
+
+
+2014-10-18 03:27 +0000
+- initial commit: lib + twitch

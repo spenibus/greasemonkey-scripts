@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141118-1246
+// @version     20141208-2100
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-11-18 12:46 +0000
+  update: 2014-12-08 21:00 +0000
 *******************************************************************************/
 
 
@@ -423,12 +423,6 @@ window.addEventListener('DOMContentLoaded', live, false);
 function archives() {
 
 
-   // only past broadcast and highlight pages
-   if(!loc.href.match(/\/[bc]\//i)) {
-      return;
-   }
-
-
    //*************************************************************** format time
    function timeFormat(timestamp) {
       if(timestamp) {
@@ -454,7 +448,7 @@ function archives() {
 
 
    //********************************************************************* style
-   SGL.css(''
+   var boxStyle = ''
       +'#spenibusVideoLinkBox {'
          +'display:table;'
          +'white-space:nowrap;'
@@ -500,12 +494,15 @@ function archives() {
       +'#spenibusVideoLinkBox .muted {'
          +'color:#A00;'
       +'}'
-   );
 
-
-   //****************************************************************** make box
-   var box = SGL.displayBox('spenibusVideoLinkBox');
-   box.set('init archives');
+      // playlist
+      +'#spenibusVideoLinkBox > div.playlist {'
+         +'display:none;'
+      +'}'
+      // show everything on container hover
+      +':hover > #spenibusVideoLinkBox > div.playlist {'
+         +'display:block;'
+      +'}';
 
 
    //******************************************************************* process
@@ -513,27 +510,56 @@ function archives() {
    var data = {
       'chunksMutedCount' : 0,
    };
+   // box reference
+   var box;
 
 
    //********************************** start the chain reaction: get archive id
    (function(){
 
-      // update status
-      box.set('fetching url id');
+      var path = loc.pathname;
+      var regexUrl = /\/([bcv])\/(\d+)/i;
 
-      // get archive id
-      var m = loc.pathname.match(/\/([bc])\/(\d+)/);
+      // get archive id+type
+      var m    = path.match(regexUrl);
+      var mRef = document.referrer.match(regexUrl);
 
-      // found archive id
-      if(m) {
+      // try to get /b/ if current page is /v/ and referrer is /b/
+      if(m && m[1] == 'v' && mRef && mRef[1] == 'b') {
+         path = document.referrer;
+      }
 
-         // store archive id
-         data.archiveId = {
-            'b':'a',
-            'c':'c'
-         }[m[1]] + m[2];
+      // get archive id+type
+      var m = path.match(regexUrl);
 
-         // next step
+      // abort if no id found
+      if(!m) {
+         return;
+      }
+
+      data.vodId = m[2];
+      data.type  = m[1];
+
+      // store archive id
+      data.archiveId = {
+         'b':'a',
+         'v':'v',
+         'c':'c'
+      }[data.type] + data.vodId;
+
+      // make box
+      box = SGL.displayBox('spenibusVideoLinkBox');
+      box.set('init archives');
+
+      // set style
+      SGL.css(boxStyle);
+
+      // triage: new vod, playlist
+      if(data.type == 'v') {
+         getToken();
+      }
+      // triage: old vod
+      else {
          getVideoInfo();
       }
    })();
@@ -546,8 +572,8 @@ function archives() {
       box.set('fetching video info/chunks');
 
       // store urls
-      data.infoUrl  = 'https://api.twitch.tv/kraken/videos/' + data.archiveId;
-      data.chunkUrl = 'https://api.twitch.tv/api/videos/'    + data.archiveId;
+      data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId+'&oauth_token='+data.token;
+      data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId+'&oauth_token='+data.token;
 
       // get video info
       GM_xmlhttpRequest({
@@ -692,6 +718,97 @@ function archives() {
          +'</div>'
          +html
       );
+   }
+
+
+
+
+   /****************************************************************************
+   *****************************************************************************
+   *****************************************************************************
+   ************************************************** alt: playlist vod (/v/) */
+
+
+
+
+   //***************************************************************** get token
+   function getToken() {
+
+      GM_xmlhttpRequest({
+         method : 'GET',
+         url    : 'https://api.twitch.tv/api/viewer/token.json',
+         onload : function(xhr){
+
+            data.token = JSON.parse(xhr.responseText)['token'];
+
+            if(!data.token) {
+               return;
+            }
+
+            // next step
+            getAccessToken();
+         },
+      });
+   }
+
+
+   //********************************************************** get access token
+   function getAccessToken() {
+
+      GM_xmlhttpRequest({
+         method : 'GET',
+         url    : 'https://api.twitch.tv/api/vods/'+data.vodId+'/access_token?oauth_token=' + data.token,
+         onload : function(xhr){
+
+            var d = JSON.parse(xhr.responseText);
+            data.accessToken = d.token;
+            data.sig         = d.sig;
+
+            if(!data.accessToken || !data.sig) {
+               return;
+            }
+
+            // next step
+            getVodInfo();
+         },
+      });
+   }
+
+
+   //************************************************* get video info and chunks
+   function getVodInfo() {
+
+      data.vodUrl = 'http://usher.twitch.tv/vod/' + data.vodId
+         +'?nauthsig='+data.sig+'&nauth='+encodeURIComponent(data.accessToken);
+
+      GM_xmlhttpRequest({
+         method : 'GET',
+         url    : data.vodUrl,
+         onload : function(xhr){
+
+            // next step
+            vodMasterPlaylistParse(xhr.responseText);
+         },
+      });
+   }
+
+
+   //************************************************* get video info and chunks
+   function vodMasterPlaylistParse(str) {
+
+      str = str.replace(
+         /([\r\n]+)(http.*?)([\r\n]+)/gi,
+         '$1<a href="$2">$2</a>$3'
+      );
+
+      str = str.replace(
+         /[\r\n]+/gi,
+         '<br/>\n'
+      );
+
+      box.set(''
+         +'<div>P</div>'
+         +'<div class="playlist">'+str+'</div>');
    }
 }
 window.addEventListener('DOMContentLoaded', archives, false);
