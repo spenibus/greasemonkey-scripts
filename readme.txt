@@ -1,13 +1,17 @@
 My greasemonkey scripts.
 
 
-Hitbox
+hitbox
    - archive download links
       - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
       - most of the link text is hidden for readability but remains useable regarding the previous point
 
 
-Twitch
+jeuxvideocom
+   - video download links
+
+
+twitch
    - quick links to popout and chat
    - live playlist links
    - archive download links
@@ -15,7 +19,7 @@ Twitch
       - most of the link text is hidden for readability but remains useable regarding the previous point
 
 
-Youtube
+youtube
    - disables ytspf (ajax page loading & history.pushState)
    - video download links
       - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
