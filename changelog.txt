@@ -1,3 +1,7 @@
+2014-12-18 20:36 +0000
+- twitch: updated playlist fetching
+
+
 2014-12-14 19:45 +0000
 - added jeuxvideocom
 

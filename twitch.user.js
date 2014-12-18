@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141208-2100
+// @version     20141218-2036
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +12,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-12-08 21:00 +0000
+  update: 2014-12-18 20:36 +0000
 *******************************************************************************/
 
 
@@ -287,11 +287,10 @@ function live() {
       vars.sig   = token.sig;
 
       // build playlist url
-      vars.playlistUrl = 'http://usher.twitch.tv/select/'+vars.channel+'.json'
+      vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8'
          +'?allow_source=true'
-         +'&type=any'
-         +'&nauth='+escape(vars.token)
-         +'&nauthsig='+escape(vars.sig);
+         +'&sig='+escape(vars.sig)
+         +'&token='+escape(vars.token);
 
       // get playlist
       GM_xmlhttpRequest({
