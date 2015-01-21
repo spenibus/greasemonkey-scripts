@@ -1047,7 +1047,7 @@ function archives() {
             +'<a title="'+fileTitle1+paddedCount+fileTitle2+'" href="'+list[i]+'?start_offset=0&end_offset=999999999">'
                +'<span class="extra">'+fileTitle1+' - </span>'
                +paddedCount
-               +'<span class="extra">'+fileTitle2+' - </span>'
+               +'<span class="extra">'+fileTitle2+'</span>'
             +'</a>'
             +(count%100 == 0 ? '<br/>' : ' ');
       }
