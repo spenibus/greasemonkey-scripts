@@ -3,7 +3,8 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20141218-2036
+// @include     http*://*.hls.ttvnw.net/*
+// @version     20140121-0014
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +13,7 @@
 
 /*******************************************************************************
 creation: 2012-11-17 00:00 +0000
-  update: 2014-12-18 20:36 +0000
+  update: 2015-01-21 00:14 +0000
 *******************************************************************************/
 
 
@@ -777,8 +778,9 @@ function archives() {
    //************************************************* get video info and chunks
    function getVodInfo() {
 
-      data.vodUrl = 'http://usher.twitch.tv/vod/' + data.vodId
-         +'?nauthsig='+data.sig+'&nauth='+encodeURIComponent(data.accessToken);
+      data.vodUrl = 'http://usher.twitch.tv/vod/'+data.vodId
+         +'?nauthsig='+data.sig
+         +'&nauth='+encodeURIComponent(data.accessToken);
 
       GM_xmlhttpRequest({
          method : 'GET',
@@ -795,19 +797,129 @@ function archives() {
    //************************************************* get video info and chunks
    function vodMasterPlaylistParse(str) {
 
-      str = str.replace(
-         /([\r\n]+)(http.*?)([\r\n]+)/gi,
-         '$1<a href="$2">$2</a>$3'
-      );
+      str = str.replace(/\r/g, '');
 
-      str = str.replace(
-         /[\r\n]+/gi,
-         '<br/>\n'
-      );
+      var lines = str.split('\n');
+//console.log(lines);
 
+      var items = {};
+
+/*
+#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="chunked",NAME="Source",AUTOSELECT=YES,DEFAULT=YES
+#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=3698834,CODECS="avc1.100.40,mp4a.40.2",VIDEO="chunked"
+http://*********
+*/
+      // https://tools.ietf.org/html/draft-pantos-http-live-streaming-07
+      // 3.2.  Attribute Lists
+      var metaParse = function(str) {
+
+         var metaObj = {};
+
+         var regexAttr = [
+            '[0-9]*',
+            '0x[0-9a-f]*',
+            '[0-9\.]*',
+            '"(.*?)"',
+            '[^",\\s]*',//'.*?',//'[^",\s]*',
+            '[0-9]x[0-9]',
+         ];
+
+         var regex = new RegExp(
+            '([a-z\\-]+)=('+regexAttr.join('|')+')(,|$)',
+            'gi'
+         );
+
+         var bits = str.split(':');
+
+         for(var m; m=regex.exec(bits[1]); null) {
+            metaObj[m[1]] = m[3] || m[2];
+         }
+
+         return [bits[0].substr(7), metaObj];
+      };
+
+
+      var items = [];
+
+
+      for(var i=0; i<lines.length; ++i) {
+
+
+         // shorthand
+         var line = lines[i];
+
+
+         // new item
+         if(!item) {
+            var item = {
+               meta : {},
+               url  : '',
+            };
+         }
+
+
+         // metadata
+         if(line.substr(0,7) == '#EXT-X-') {
+
+            var tmp = metaParse(line);
+            item['meta'][tmp[0]] = tmp[1];
+         }
+
+
+         // url
+         else if(line.substr(0,4) == 'http') {
+
+            item['url'] = line;
+            items.push(item);
+
+            // reset item
+            item = null;
+         }
+      }
+
+
+      var html = '';
+
+
+      // build output
+      for(var i=0; i<items.length; ++i) {
+
+
+         // shorthand
+         var item = items[i];
+
+
+         html += ''
+         +'<div class="vod">'
+            +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 1024)+' kbps</a></div>'
+            +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
+            +'<div class="list" data-name="'+item.meta.MEDIA.NAME+'"></div>'
+         +'</div>';
+
+
+         // get files
+/* NEXT COMMIT
+         GM_xmlhttpRequest({
+            url    : item.url,
+            method : 'GET',
+            onload : function(){},
+         });
+*/
+
+      }
+
+
+
+
+      //*********************************************************** display html
       box.set(''
-         +'<div>P</div>'
-         +'<div class="playlist">'+str+'</div>');
+         +'<div class="header">'
+            +'<div>A</div>'
+            +'<div>name</div>'
+            +'<div>files</div>'
+         +'</div>'
+         +html
+      );
    }
 }
 window.addEventListener('DOMContentLoaded', archives, false);
