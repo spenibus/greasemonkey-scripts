@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20150121-0400
+// @version     20150121-0410
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -1031,17 +1031,24 @@ function archives() {
 
          ++count;
 
-         var fileTitle = 'twitch'
+         var fileTitle1 = 'twitch'
             +' - '+data.info.channel.name
             +' - '+timeFormat(data.start)
-            +' - '+('000000'+count).substr(countMaxLength)
-               +'-'+('000000'+countMax).substr(countMaxLength)
+            +' - ';
+
+         var fileTitle2 = '-'+('000000'+countMax).substr(countMaxLength)
             +' - '+data.titleClean
             +' - '+data.info.broadcast_id
             +' - '+xhr.context.meta.MEDIA.NAME;
 
+         var paddedCount = ('000000'+count).substr(countMaxLength);
+
          html += ''
-            +'<a title="'+fileTitle+'" href="'+list[i]+'?start_offset=0&end_offset=999999999">'+('000000'+count).substr(countMaxLength)+'</a>'
+            +'<a title="'+fileTitle1+paddedCount+fileTitle2+'" href="'+list[i]+'?start_offset=0&end_offset=999999999">'
+               +'<span class="extra">'+fileTitle1+' - </span>'
+               +paddedCount
+               +'<span class="extra">'+fileTitle2+' - </span>'
+            +'</a>'
             +(count%100 == 0 ? '<br/>' : ' ');
       }
 
