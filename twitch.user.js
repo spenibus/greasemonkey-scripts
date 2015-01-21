@@ -3,18 +3,11 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @include     http*://*.hls.ttvnw.net/*
-// @version     20140121-0014
+// @version     20150121-0400
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
-
-
-/*******************************************************************************
-creation: 2012-11-17 00:00 +0000
-  update: 2015-01-21 00:14 +0000
-*******************************************************************************/
 
 
 
@@ -44,6 +37,119 @@ var cfg = {};
 function getChannel() {
    var m = loc.pathname.match(/^\/([^\/]+)/);
    return m ? m[1].toLowerCase() : null;
+}
+
+
+
+
+/******************************************************** m3u metadata parser */
+// https://tools.ietf.org/html/draft-pantos-http-live-streaming-07
+// 3.2.  Attribute Lists
+function metaParse(str) {
+
+   var metaObj = {};
+
+   var regexAttr = [
+      '[0-9]*',
+      '0x[0-9a-f]*',
+      '[0-9\.]*',
+      '"(.*?)"',
+      '[^",\\s]*',
+      '[0-9]x[0-9]',
+   ];
+
+   var regex = new RegExp(
+      '([a-z\\-]+)=('+regexAttr.join('|')+')(,|$)',
+      'gi'
+   );
+
+   var bits = str.split(':');
+
+   for(var m; m=regex.exec(bits[1]); null) {
+      metaObj[m[1]] = m[3] || m[2];
+   }
+
+   return [bits[0].substr(7), metaObj];
+};
+
+
+
+
+/***************************************************************** m3u parser */
+function playlistParse(str) {
+
+   // no carriage returns
+   str = str.replace(/\r/g, '');
+
+   // split by newlines
+   var lines = str.split('\n');
+
+   // prepare output
+   var items = [];
+
+   // go through lines
+   for(var i=0; i<lines.length; ++i) {
+
+      // shorthand
+      var line = lines[i];
+
+      // new item
+      if(!item) {
+         var item = {
+            meta : {},
+            url  : '',
+         };
+      }
+
+
+      // metadata: twitch
+      if(line.substr(0,14) == '#EXT-X-TWITCH-') {
+
+         var tmp = line.split(':');
+         item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
+      }
+
+      // metadata: playlist datetime
+      else if(line.substr(0,15) == '#ID3-EQUIV-TDTG') {
+
+         var tmp = line.split(':');
+         item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
+      }
+
+      // metadata
+      else if(line.substr(0,7) == '#EXT-X-') {
+
+         var tmp = metaParse(line);
+         item['meta'][tmp[0]] = tmp[1];
+      }
+
+      // extinf
+      else if(line.substr(0,7) == '#EXTINF') {
+         // don't care
+      }
+
+      // unexpected metadata
+      else if(line.substr(0,1) == '#') {
+         // don't care
+      }
+
+      // empty (generally end of file)
+      else if(!line) {
+         // don't care
+      }
+
+      // assume url
+      else {
+
+         item['url'] = line;
+         items.push(item);
+
+         // reset item
+         item = null;
+      }
+   }
+
+   return items;
 }
 
 
@@ -502,6 +608,14 @@ function archives() {
       // show everything on container hover
       +':hover > #spenibusVideoLinkBox > div.playlist {'
          +'display:block;'
+      +'}'
+      // vod list
+      +'#spenibusVideoLinkBox > div.vod  .list {'
+         +'overflow-x:auto;'
+         +'max-width:50vw;'
+      +'}'
+      +'#spenibusVideoLinkBox > div.vod  .list > :nth-child(2n) {'
+         +'background-color:rgba(0,0,0,0.25)'
       +'}';
 
 
@@ -554,14 +668,8 @@ function archives() {
       // set style
       SGL.css(boxStyle);
 
-      // triage: new vod, playlist
-      if(data.type == 'v') {
-         getToken();
-      }
-      // triage: old vod
-      else {
-         getVideoInfo();
-      }
+      // next step
+      getVideoInfo();
    })();
 
 
@@ -575,6 +683,11 @@ function archives() {
       data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId+'&oauth_token='+data.token;
       data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId+'&oauth_token='+data.token;
 
+
+      // triage: new vod, playlist | old vod
+      var nextStep = data.type == 'v' ? getToken : buildList;
+
+
       // get video info
       GM_xmlhttpRequest({
          method : 'GET',
@@ -586,10 +699,25 @@ function archives() {
                ? JSON.parse(xhr.responseText)
                : false;
 
+
+            // archive start as timestamp and string
+            data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
+            data.startStr = timeFormat(data.start);
+
+            // archive duration as timestamp and string
+            data.duration    = data.info.length;
+            data.durationStr = durationFormat(data.duration);
+
+            // archive title as raw and windows filename safe
+            data.title       = data.info.title;
+            data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
+
+
             // next step
-            buildList();
+            nextStep();
          },
       });
+
 
       // get video chunks
       GM_xmlhttpRequest({
@@ -606,7 +734,7 @@ function archives() {
                : false;
 
             // next step
-            buildList();
+            nextStep();
          },
       });
    }
@@ -620,20 +748,10 @@ function archives() {
          return;
       }
 
+
       // update status
       box.set('building list');
 
-      // archive start as timestamp and string
-      data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
-      data.startStr = timeFormat(data.start);
-
-      // archive duration as timestamp and string
-      data.duration    = data.info.length;
-      data.durationStr = durationFormat(data.duration);
-
-      // archive title as raw and windows filename safe
-      data.title       = data.info.title;
-      data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
 
       // available archive qualities
       data.qualities = [];
@@ -734,6 +852,13 @@ function archives() {
    //***************************************************************** get token
    function getToken() {
 
+
+      // need both info and chunks to be available
+      if(!data.info || !data.chunks) {
+         return;
+      }
+
+
       GM_xmlhttpRequest({
          method : 'GET',
          url    : 'https://api.twitch.tv/api/viewer/token.json',
@@ -785,141 +910,144 @@ function archives() {
       GM_xmlhttpRequest({
          method : 'GET',
          url    : data.vodUrl,
-         onload : function(xhr){
-
-            // next step
-            vodMasterPlaylistParse(xhr.responseText);
-         },
+         onload : vodMasterPlaylistLinks,
       });
    }
 
 
-   //************************************************* get video info and chunks
-   function vodMasterPlaylistParse(str) {
-
-      str = str.replace(/\r/g, '');
-
-      var lines = str.split('\n');
-//console.log(lines);
-
-      var items = {};
-
-/*
-#EXT-X-MEDIA:TYPE=VIDEO,GROUP-ID="chunked",NAME="Source",AUTOSELECT=YES,DEFAULT=YES
-#EXT-X-STREAM-INF:PROGRAM-ID=1,BANDWIDTH=3698834,CODECS="avc1.100.40,mp4a.40.2",VIDEO="chunked"
-http://*********
-*/
-      // https://tools.ietf.org/html/draft-pantos-http-live-streaming-07
-      // 3.2.  Attribute Lists
-      var metaParse = function(str) {
-
-         var metaObj = {};
-
-         var regexAttr = [
-            '[0-9]*',
-            '0x[0-9a-f]*',
-            '[0-9\.]*',
-            '"(.*?)"',
-            '[^",\\s]*',//'.*?',//'[^",\s]*',
-            '[0-9]x[0-9]',
-         ];
-
-         var regex = new RegExp(
-            '([a-z\\-]+)=('+regexAttr.join('|')+')(,|$)',
-            'gi'
-         );
-
-         var bits = str.split(':');
-
-         for(var m; m=regex.exec(bits[1]); null) {
-            metaObj[m[1]] = m[3] || m[2];
-         }
-
-         return [bits[0].substr(7), metaObj];
-      };
 
 
-      var items = [];
+   //*********************************************************** master playlist
+   function vodMasterPlaylistLinks(xhr) {
 
+      var str = xhr.responseText;
 
-      for(var i=0; i<lines.length; ++i) {
-
-
-         // shorthand
-         var line = lines[i];
-
-
-         // new item
-         if(!item) {
-            var item = {
-               meta : {},
-               url  : '',
-            };
-         }
-
-
-         // metadata
-         if(line.substr(0,7) == '#EXT-X-') {
-
-            var tmp = metaParse(line);
-            item['meta'][tmp[0]] = tmp[1];
-         }
-
-
-         // url
-         else if(line.substr(0,4) == 'http') {
-
-            item['url'] = line;
-            items.push(item);
-
-            // reset item
-            item = null;
-         }
-      }
-
+      var items = playlistParse(str);
 
       var html = '';
-
 
       // build output
       for(var i=0; i<items.length; ++i) {
 
-
          // shorthand
          var item = items[i];
 
-
          html += ''
          +'<div class="vod">'
+            +'<div></div>'
             +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 1024)+' kbps</a></div>'
             +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
-            +'<div class="list" data-name="'+item.meta.MEDIA.NAME+'"></div>'
+            +'<div><div class="list" data-name="'+item.meta.MEDIA.NAME+'"></div></div>'
          +'</div>';
 
 
          // get files
-/* NEXT COMMIT
          GM_xmlhttpRequest({
-            url    : item.url,
-            method : 'GET',
-            onload : function(){},
+            method  : 'GET',
+            url     : item.url,
+            context : item,
+            onload : vodPlaylistLinks,
          });
-*/
-
       }
-
-
 
 
       //*********************************************************** display html
       box.set(''
          +'<div class="header">'
             +'<div>A</div>'
-            +'<div>name</div>'
+            +'<div>bitrate</div>'
+            +'<div>duration<br/>'+data.durationStr+'</div>'
             +'<div>files</div>'
          +'</div>'
          +html
       );
+   }
+
+
+
+
+   //************************************************** vod playlist files links
+   function vodPlaylistLinks(xhr) {
+
+
+      // get target node
+      var node = document.querySelector('div.vod div.list[data-name="'+xhr.context.meta.MEDIA.NAME+'"]');
+
+
+      // abort if no target
+      if(!node) {
+         return;
+      }
+
+
+      // archive title as raw and windows filename safe
+      data.title       = data.info.title;
+      data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
+
+
+      // get response text
+      var str = xhr.responseText;
+
+
+      // file path
+      var path = xhr.finalUrl.split('/');
+      path[path.length-1] = '';
+      path = path.join('/');
+
+
+      // parse playlist
+      var items = playlistParse(str);
+
+
+      // init files list
+      var list = {};
+
+
+      // build files list
+      for(var i=0; i<items.length; ++i) {
+
+         var url = items[i].url;
+
+         // remove hash (play safe)
+         url = url.split('#')[0];
+
+         // remove args
+         url = url.split('?')[0];
+
+         // build list of unique files
+         list[url] = path+url;
+      }
+
+
+      var meta = items[0]['meta'];
+
+
+      // build output
+      var count          = 0;
+      var countMax       = Object.keys(list).length;
+      var countMaxLength = countMax.toString().length * -1;
+      var html           = '';
+      for(var i in list) {
+
+         ++count;
+
+         var fileTitle = 'twitch'
+            +' - '+data.info.channel.name
+            +' - '+timeFormat(data.start)
+            +' - '+('000000'+count).substr(countMaxLength)
+               +'-'+('000000'+countMax).substr(countMaxLength)
+            +' - '+data.titleClean
+            +' - '+data.info.broadcast_id
+            +' - '+xhr.context.meta.MEDIA.NAME;
+
+         html += ''
+            +'<a title="'+fileTitle+'" href="'+list[i]+'?start_offset=0&end_offset=999999999">'+('000000'+count).substr(countMaxLength)+'</a>'
+            +(count%100 == 0 ? '<br/>' : ' ');
+      }
+
+
+      // insert file list in target
+      node.innerHTML = html;
    }
 }
 window.addEventListener('DOMContentLoaded', archives, false);
