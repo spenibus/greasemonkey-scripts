@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20150121-0434
+// @version     20150122-0529
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -613,6 +613,7 @@ function archives() {
       +'#spenibusVideoLinkBox > div.vod  .list {'
          +'overflow-x:auto;'
          +'max-width:50vw;'
+         +'text-align:left;'
       +'}'
       +'#spenibusVideoLinkBox > div.vod  .list > :nth-child(2n) {'
          +'background-color:rgba(0,0,0,0.25)'
