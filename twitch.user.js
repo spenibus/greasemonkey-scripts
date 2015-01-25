@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20150122-0529
+// @version     20150125-1945
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -938,6 +938,7 @@ function archives() {
             +'<div></div>'
             +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 1024)+' kbps</a></div>'
             +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
+            +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 8 * data.duration / 1024 / 1024)+' Mio</div>'
             +'<div><div class="list" data-name="'+item.meta.MEDIA.NAME+'"></div></div>'
          +'</div>';
 
@@ -958,6 +959,7 @@ function archives() {
             +'<div>A</div>'
             +'<div>bitrate</div>'
             +'<div>duration<br/>'+data.durationStr+'</div>'
+            +'<div>size<br/>(estimated)</div>'
             +'<div>files</div>'
          +'</div>'
          +html

@@ -1,3 +1,7 @@
+2015-01-25 19:45 +0000
+- twitch: added vod download size estimation
+
+
 2015-01-22 05:29 +0000
 - twitch: css update
 
