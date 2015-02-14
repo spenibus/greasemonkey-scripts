@@ -1,3 +1,7 @@
+2015-02-14 17:28 +0000
+- jeuxvideocom: updated id parsing
+
+
 2015-01-25 19:45 +0000
 - twitch: added vod download size estimation
 

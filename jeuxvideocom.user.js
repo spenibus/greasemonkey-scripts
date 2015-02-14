@@ -3,16 +3,10 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://jeuxvideo.com/*
 // @include     http*://*.jeuxvideo.com/*
-// @version     20141214-1945
+// @version     20150214-1728
 // @require     spenibus-greasemonkey-lib.js
 // @grant       GM_xmlhttpRequest
 // ==/UserScript==
-
-
-/*******************************************************************************
-creation: 2008-07-07 00:00 +0000
-  update: 2014-12-14 19:45 +0000
-*******************************************************************************/
 
 
 
@@ -79,11 +73,13 @@ function videoDownloadLinks() {
       +'}';
 
 
-   // get config data
+
+
+   //*********************************************************** get config data
    (function(){
       var node = document.querySelector('meta[property="og:video"]');
 
-      vars.videoId = node.getAttribute('content').match(/id=(\d+)/)[1];
+      vars.videoId = node.getAttribute('content').match(/(\d+)$/)[1];
       vars.cfgUrl  = '//'+loc.hostname+'/contenu/medias/video.php?q=config&id='+vars.videoId;
 
       box.set('looking up <a href="'+vars.cfgUrl+'">config</a>');
@@ -99,7 +95,9 @@ function videoDownloadLinks() {
    })();
 
 
-   // make list
+
+
+   //***************************************************************** make list
    var listBuild = function(data) {
 
       var list = '';
