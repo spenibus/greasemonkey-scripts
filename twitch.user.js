@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20150125-1945
+// @version     20150303-1359
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -674,6 +674,32 @@ function archives() {
    })();
 
 
+   //***************************************************************** get token
+   /**
+   function getToken() {
+
+
+      GM_xmlhttpRequest({
+         method : 'GET',
+         url    : 'https://api.twitch.tv/api/viewer/token.json',
+         onload : function(xhr){
+
+            data.token = JSON.parse(xhr.responseText)['token'];
+
+            if(!data.token) {
+               return;
+            }
+
+            box.set('got token');
+
+            // next step
+            getVideoInfo();
+         },
+      });
+   }
+   /**/
+
+
    //************************************************* get video info and chunks
    function getVideoInfo() {
 
@@ -681,12 +707,12 @@ function archives() {
       box.set('fetching video info/chunks');
 
       // store urls
-      data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId+'&oauth_token='+data.token;
-      data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId+'&oauth_token='+data.token;
+      data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;//+'&oauth_token='+data.token;
+      data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId;//+'&oauth_token='+data.token;
 
 
       // triage: new vod, playlist | old vod
-      var nextStep = data.type == 'v' ? getToken : buildList;
+      var nextStep = data.type == 'v' ? getAccessToken : buildList;
 
 
       // get video info
@@ -850,36 +876,14 @@ function archives() {
 
 
 
-   //***************************************************************** get token
-   function getToken() {
-
+   //********************************************************** get access token
+   function getAccessToken() {
 
       // need both info and chunks to be available
       if(!data.info || !data.chunks) {
          return;
       }
 
-
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : 'https://api.twitch.tv/api/viewer/token.json',
-         onload : function(xhr){
-
-            data.token = JSON.parse(xhr.responseText)['token'];
-
-            if(!data.token) {
-               return;
-            }
-
-            // next step
-            getAccessToken();
-         },
-      });
-   }
-
-
-   //********************************************************** get access token
-   function getAccessToken() {
 
       GM_xmlhttpRequest({
          method : 'GET',
