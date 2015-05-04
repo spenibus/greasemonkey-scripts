@@ -1,7 +1,5 @@
 /*******************************************************************************
 spenibus greasemonkey lib
-creation: 2014-10-17 22:19 +0200
-  update: 2014-10-17 22:47 +0200
 *******************************************************************************/
 
 
@@ -9,7 +7,7 @@ spenibus_greasemonkey_lib = {
 
 
    // lib version
-   version : 20141017.2247,
+   version : 20150504.0203,
 
 
 
@@ -121,6 +119,73 @@ spenibus_greasemonkey_lib = {
 
       // return object
       return content;
+   },
+
+
+
+
+   /****************************** time format from timestamp in milliseconds */
+   /*
+      Y  full year
+      m  month, 01-12
+      d  day, 01-31
+      H  hours, 0-22
+      i  minutes, 00-59
+      s  seconds, 00-59
+      O  timezone offset -1200 +1200
+   */
+   timeFormat : function(str, timestamp) {
+
+      var time = new Date(timestamp);
+
+      var timeStr = str;
+
+      timeStr = timeStr.replace('Y', time.getFullYear());
+      timeStr = timeStr.replace('m', ('0'+(time.getMonth()+1)).slice(-2));
+      timeStr = timeStr.replace('d', ('0'+time.getDate()).slice(-2));
+      timeStr = timeStr.replace('H', ('0'+time.getHours()).slice(-2));
+      timeStr = timeStr.replace('i', ('0'+time.getMinutes()).slice(-2));
+      timeStr = timeStr.replace('s', ('0'+time.getSeconds()).slice(-2));
+
+      timeStr = timeStr.replace('O', function(){
+         var tz  = time.getTimezoneOffset();
+         var tzh = Math.floor(Math.abs(tz)/60);
+         var tzm = tz%60;
+         var tzs = tz/Math.abs(tz);
+         return (tzs < 0 ? '-' : '+')
+            +('0'+tzh).slice(-2)
+            +('0'+tzm).slice(-2);
+      });
+
+      return timeStr;
+   },
+
+
+
+
+   /************************** time format UTC from timestamp in milliseconds */
+   /*
+      Y  full year
+      m  month, 01-12
+      d  day, 01-31
+      H  hours, 0-22
+      i  minutes, 00-59
+      s  seconds, 00-59
+   */
+   timeFormatUTC : function(str, timestamp) {
+
+      var time = new Date(timestamp);
+
+      var timeStr = str;
+
+      timeStr = timeStr.replace('Y', time.getUTCFullYear());
+      timeStr = timeStr.replace('m', ('0'+(time.getUTCMonth()+1)).slice(-2));
+      timeStr = timeStr.replace('d', ('0'+time.getUTCDate()).slice(-2));
+      timeStr = timeStr.replace('H', ('0'+time.getUTCHours()).slice(-2));
+      timeStr = timeStr.replace('i', ('0'+time.getUTCMinutes()).slice(-2));
+      timeStr = timeStr.replace('s', ('0'+time.getUTCSeconds()).slice(-2));
+
+      return timeStr;
    },
 };
 
