@@ -1,4 +1,8 @@
 2015-05-04 02:05 +0000
+- added escapistmagazine
+
+
+2015-05-04 02:05 +0000
 - updated lib
 
 

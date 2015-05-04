@@ -1,6 +1,10 @@
 My greasemonkey scripts.
 
 
+escapistmagazine
+   - video download links
+
+
 hitbox
    - archive download links
       - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
