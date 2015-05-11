@@ -1,5 +1,7 @@
 My greasemonkey scripts.
 http://spenibus.net
+https://github.com/spenibus/greasemonkey-scripts
+https://gitlab.com/spenibus/greasemonkey-scripts
 
 
 escapistmagazine
