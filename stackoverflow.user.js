@@ -3,7 +3,7 @@
 // @namespace   stackoverflow@spenibus
 // @include     http*://stackoverflow.com/*
 // @include     http*://*.stackoverflow.com/*
-// @version     20150807-0012
+// @version     20150816-1930
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
@@ -46,6 +46,21 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
         // matches holder
         var m;
 
+
+        // init to zero
+        for(
+            var i of [
+                'moderator attention flags',
+                'waiting for review',
+                'deemed helpful',
+                'declined',
+                'disputed',
+            ]
+        ) {
+            stats[i] = 0;
+        }
+
+
         while(m = r.exec(s)) {
 
             if(!stats[m[2]]) {
@@ -55,7 +70,7 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
             stats[m[2]] += parseInt(m[1]);
         }
 
-        var factor = 100 / stats['moderator attention flags']; // (stats['deemed helpful'] + stats['declined']);
+        var factor = 100 / (stats['moderator attention flags'] || 1); // (stats['deemed helpful'] + stats['declined']);
 
         var extraFlagsCount = stats['deemed helpful'] - stats['declined'];
         var extraFlags      = Math.floor(extraFlagsCount/10);
@@ -108,7 +123,7 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
                 +'</tr>'
                 +'<tr>'
                     +'<td colspan="99" class="sep">helpful/declined ratio<br />'
-                        +fixedRound(stats['deemed helpful']/stats['declined'], 2)+'</td>'
+                        +fixedRound(stats['deemed helpful']/(stats['declined']||1), 2)+'</td>'
                 +'</tr>'
             +'</table>';
 
