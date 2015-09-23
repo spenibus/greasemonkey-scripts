@@ -3,7 +3,7 @@
 // @namespace   stackoverflow@spenibus
 // @include     http*://stackoverflow.com/*
 // @include     http*://*.stackoverflow.com/*
-// @version     20150816-1930
+// @version     20150923-0255
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
@@ -70,7 +70,10 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
             stats[m[2]] += parseInt(m[1]);
         }
 
-        var factor = 100 / (stats['moderator attention flags'] || 1); // (stats['deemed helpful'] + stats['declined']);
+        var processedCount = (stats['deemed helpful'] + stats['disputed'] + stats['declined']) || 0;
+
+        var factorProcessed = 100 / (processedCount || 1);
+        var factorTotal     = 100 / (stats['moderator attention flags'] || 1); // (stats['deemed helpful'] + stats['declined']);
 
         var extraFlagsCount = stats['deemed helpful'] - stats['declined'];
         var extraFlags      = Math.floor(extraFlagsCount/10);
@@ -89,33 +92,39 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
                     +'<td colspan="99">Flags stats</td>'
                 +'</tr>'
                 +'<tr>'
+                    +'<td>'+processedCount+'</td>'
+                    +'<td>'+fixedRound(factorTotal * stats['moderator attention flags'], 2)+'%</td>'
                     +'<td>'+stats['moderator attention flags']+'</td>'
-                    +'<td>'+fixedRound(factor * stats['moderator attention flags'], 2)+'%</td>'
                     +'<td>total</td>'
                 +'</tr>'
                 +'<tr style="color:#080;">'
+                    +'<td>'+fixedRound(factorProcessed * stats['deemed helpful'], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats['deemed helpful'], 2)+'%</td>'
                     +'<td>'+stats['deemed helpful']+'</td>'
-                    +'<td>'+fixedRound(factor * stats['deemed helpful'], 2)+'%</td>'
                     +'<td>helpful</td>'
                 +'</tr>'
                 +'<tr style="color:#880;">'
+                    +'<td>'+fixedRound(factorProcessed * stats['disputed'], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats['disputed'], 2)+'%</td>'
                     +'<td>'+stats['disputed']+'</td>'
-                    +'<td>'+fixedRound(factor * stats['disputed'], 2)+'%</td>'
                     +'<td>disputed</td>'
                 +'</tr>'
                 +'<tr style="color:#800;">'
+                    +'<td>'+fixedRound(factorProcessed * stats['declined'], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats['declined'], 2)+'%</td>'
                     +'<td>'+stats['declined']+'</td>'
-                    +'<td>'+fixedRound(factor * stats['declined'], 2)+'%</td>'
                     +'<td>declined</td>'
                 +'</tr>'
                 +'<tr style="color:#888;">'
+                    +'<td></td>'
+                    +'<td>'+fixedRound(factorTotal * stats['waiting for review'], 2)+'%</td>'
                     +'<td>'+stats['waiting for review']+'</td>'
-                    +'<td>'+fixedRound(factor * stats['waiting for review'], 2)+'%</td>'
                     +'<td>waiting</td>'
                 +'</tr>'
                 +'<tr style="color:#888;">'
+                    +'<td></td>'
+                    +'<td>'+fixedRound(factorTotal * lost, 2)+'%</td>'
                     +'<td>'+lost+'</td>'
-                    +'<td>'+fixedRound(factor * lost, 2)+'%</td>'
                     +'<td>lost</td>'
                 +'</tr>'
                 +'<tr>'
@@ -139,6 +148,9 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
             +'#spenibus_flags_stats td {'
                 +'padding:0 4px;'
                 +'text-align:right;'
+            +'}'
+            +'#spenibus_flags_stats td:nth-child(2n) {'
+                +'background-color:rgba(0,0,0,0.05);'
             +'}'
             +'#spenibus_flags_stats .sep {'
                 +'border-top:1px solid #888;'
