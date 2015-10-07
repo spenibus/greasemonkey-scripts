@@ -1,9 +1,10 @@
 // ==UserScript==
 // @name        youtube
 // @namespace   greasemonkey@spenibus
+// @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20141118-1248
+// @version     20151007-1859
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,7 +13,6 @@
 
 /*******************************************************************************
 creation: 2010-11-12 00:00 +0000
-  update: 2014-11-18 12:48 +0000
 
 TODO
    - handle "protected" videos, maybe
@@ -140,45 +140,42 @@ function videoLinks() {
    })();
 
 
-   //************************************************************ published time
-   var published = (function(){
-      box.set('fetching published time');
+    //*********************************************************** published time
+    var published = (function(){
+        box.set('fetching published time');
 
-      var tmp = {};
+        var tmp = {};
 
-      if(!videoId) {
-         return tmp;
-      }
+        if(!videoId) {
+            return tmp;
+        }
 
-      //var tmpD = document.querySelector('span#eow-date');
+        var str = GM_xmlhttpRequest({
+            method:      "GET",
+            url :        'https://www.youtube.com/list_ajax?style=json&action_get_templist=1&video_ids='+videoId,
+            synchronous: true,
+        });
 
-      var xml = GM_xmlhttpRequest({
-         method:      "GET",
-         url:         "http://gdata.youtube.com/feeds/api/videos/"+videoId,
-         synchronous: true,
-      });
+        tmp.date = JSON.parse(
+            str.responseText || '{ "video" : [ { "time_created" : 0 } ] }'
+        ).video[0].time_created;
 
-      var parser = new DOMParser();
-      var doc = parser.parseFromString(xml.responseText, "application/xml");
+        tmp.date = tmp.date > 0
+            ? new Date(tmp.date * 1000)
+            : false;
 
-      tmp.date = doc.querySelector('published');
+        tmp.formatted = tmp.date
+            ? tmp.date.getUTCFullYear()
+                +''+('0'+(tmp.date.getUTCMonth()+1)).slice(-2)
+                +''+('0'+tmp.date.getUTCDate()).slice(-2)
+                +'-'+('0'+tmp.date.getUTCHours()).slice(-2)
+                +''+('0'+tmp.date.getUTCMinutes()).slice(-2)
+                +''+('0'+tmp.date.getUTCSeconds()).slice(-2)
+                +'-UTC'
+            : '';
 
-      tmp.date = tmp.date && tmp.date.textContent
-         ? new Date(tmp.date.textContent)
-         : false;
-
-      tmp.formatted = tmp.date
-         ? tmp.date.getUTCFullYear()
-            +''+('0'+(tmp.date.getUTCMonth()+1)).slice(-2)
-            +''+('0'+tmp.date.getUTCDate()).slice(-2)
-            +'-'+('0'+tmp.date.getUTCHours()).slice(-2)
-            +''+('0'+tmp.date.getUTCMinutes()).slice(-2)
-            +''+('0'+tmp.date.getUTCSeconds()).slice(-2)
-            +'-UTC'
-         : '';
-
-      return tmp;
-   })();
+        return tmp;
+    })();
 
 
    //********************************************************************** user
