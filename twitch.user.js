@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20150303-1359
+// @version     20151020-0007
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -922,146 +922,148 @@ function archives() {
 
 
 
-   //*********************************************************** master playlist
-   function vodMasterPlaylistLinks(xhr) {
+    //********************************************************** master playlist
+    function vodMasterPlaylistLinks(xhr) {
 
-      var str = xhr.responseText;
-
-      var items = playlistParse(str);
-
-      var html = '';
-
-      // build output
-      for(var i=0; i<items.length; ++i) {
-
-         // shorthand
-         var item = items[i];
-
-         html += ''
-         +'<div class="vod">'
-            +'<div></div>'
-            +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 1024)+' kbps</a></div>'
-            +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
-            +'<div>'+Math.round(item.meta['STREAM-INF'].BANDWIDTH / 8 * data.duration / 1024 / 1024)+' Mio</div>'
-            +'<div><div class="list" data-name="'+item.meta.MEDIA.NAME+'"></div></div>'
-         +'</div>';
+        var str   = xhr.responseText;
+        var items = playlistParse(str);
+        var html  = '';
 
 
-         // get files
-         GM_xmlhttpRequest({
-            method  : 'GET',
-            url     : item.url,
-            context : item,
-            onload : vodPlaylistLinks,
-         });
-      }
+        //********************************************************* display html
+        box.set(''
+            +'<div class="header">'
+                +'<div>A</div>'
+                +'<div>bitrate</div>'
+                +'<div>duration<br/>'+data.durationStr+'</div>'
+                +'<div>size<br/>(estimated)</div>'
+                +'<div>files</div>'
+            +'</div>'
+        );
 
 
-      //*********************************************************** display html
-      box.set(''
-         +'<div class="header">'
-            +'<div>A</div>'
-            +'<div>bitrate</div>'
-            +'<div>duration<br/>'+data.durationStr+'</div>'
-            +'<div>size<br/>(estimated)</div>'
-            +'<div>files</div>'
-         +'</div>'
-         +html
-      );
-   }
+        //********************************************************* build output
+        for(var i=0; i<items.length; ++i) {
+
+            // shorthand
+            var item = items[i];
+
+            item.rate = Math.round(item.meta['STREAM-INF'].BANDWIDTH / 1024);
+            item.size = Math.round(item.meta['STREAM-INF'].BANDWIDTH * data.duration / 1024 / 1024 / 8);
+
+            item.node = document.createElement('div');
+
+            item.node.setAttribute('data-name', item.meta.MEDIA.NAME);
+            item.node.classList.add('vod');
+
+            item.node.innerHTML = ''
+                +'<div></div>'
+                +'<div>'+item.rate+' kbps</a></div>'
+                +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
+                +'<div>'
+                    +'<div class="size">'+item.size+' Mio</div>'
+                    +'<div class="filesCount"></div>'
+                +'</div>'
+                +'<div><div class="list"></div></div>'
+
+            box.node.appendChild(item.node);
+
+            // get files
+            GM_xmlhttpRequest({
+                method  : 'GET',
+                url     : item.url,
+                context : item,
+                onload  : vodPlaylistLinks,
+            });
+        }
+    }
 
 
 
 
-   //************************************************** vod playlist files links
-   function vodPlaylistLinks(xhr) {
+    //************************************************* vod playlist files links
+    function vodPlaylistLinks(xhr) {
+
+        var node      = xhr.context.node;
+        var nodeList  = node.querySelector('.list');
+        var nodeCount = node.querySelector('.filesCount');
 
 
-      // get target node
-      var node = document.querySelector('div.vod div.list[data-name="'+xhr.context.meta.MEDIA.NAME+'"]');
+        // archive title as raw and windows filename safe
+        data.title      = data.info.title;
+        data.titleClean = data.title.replace(/[\:*?"<>|/]/g, '_');
 
 
-      // abort if no target
-      if(!node) {
-         return;
-      }
+        // get response text
+        var str = xhr.responseText;
 
 
-      // archive title as raw and windows filename safe
-      data.title       = data.info.title;
-      data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
+        // file path
+        var path = xhr.finalUrl.split('/');
+        path[path.length-1] = '';
+        path = path.join('/');
 
 
-      // get response text
-      var str = xhr.responseText;
+        // parse playlist
+        var items = playlistParse(str);
 
 
-      // file path
-      var path = xhr.finalUrl.split('/');
-      path[path.length-1] = '';
-      path = path.join('/');
+        // init files list
+        var list = {};
 
 
-      // parse playlist
-      var items = playlistParse(str);
+        // build files list
+        for(var i=0; i<items.length; ++i) {
+
+            var url = items[i].url;
+
+            // remove hash (play safe)
+            url = url.split('#')[0];
+
+            // remove args
+            url = url.split('?')[0];
+
+            // build list of unique files
+            list[url] = path+url;
+        }
 
 
-      // init files list
-      var list = {};
+        var meta = items[0]['meta'];
 
 
-      // build files list
-      for(var i=0; i<items.length; ++i) {
+        // build output
+        var count          = 0;
+        var countMax       = Object.keys(list).length;
+        var countMaxLength = countMax.toString().length * -1;
+        var html           = '';
+        for(var i in list) {
 
-         var url = items[i].url;
+            ++count;
 
-         // remove hash (play safe)
-         url = url.split('#')[0];
+            var fileTitle1 = 'twitch'
+                +' - '+data.info.channel.name
+                +' - '+timeFormat(data.start)
+                +' - ';
 
-         // remove args
-         url = url.split('?')[0];
+            var fileTitle2 = '-'+('000000'+countMax).substr(countMaxLength)
+                +' - '+data.titleClean
+                +' - '+data.info.broadcast_id
+                +' - '+xhr.context.meta.MEDIA.NAME;
 
-         // build list of unique files
-         list[url] = path+url;
-      }
+            var paddedCount = ('000000'+count).substr(countMaxLength);
 
+            html += ''
+                +'<a title="'+fileTitle1+paddedCount+fileTitle2+'" href="'
+                    +list[i]+'?start_offset=0&end_offset=999999999">'
+                    +'<span class="extra">'+fileTitle1+'</span>'
+                    +paddedCount
+                    +'<span class="extra">'+fileTitle2+'</span>'
+                +'</a>'
+                +(count%100 == 0 ? '<br/>' : ' ');
+        }
 
-      var meta = items[0]['meta'];
-
-
-      // build output
-      var count          = 0;
-      var countMax       = Object.keys(list).length;
-      var countMaxLength = countMax.toString().length * -1;
-      var html           = '';
-      for(var i in list) {
-
-         ++count;
-
-         var fileTitle1 = 'twitch'
-            +' - '+data.info.channel.name
-            +' - '+timeFormat(data.start)
-            +' - ';
-
-         var fileTitle2 = '-'+('000000'+countMax).substr(countMaxLength)
-            +' - '+data.titleClean
-            +' - '+data.info.broadcast_id
-            +' - '+xhr.context.meta.MEDIA.NAME;
-
-         var paddedCount = ('000000'+count).substr(countMaxLength);
-
-         html += ''
-            +'<a title="'+fileTitle1+paddedCount+fileTitle2+'" href="'+list[i]+'?start_offset=0&end_offset=999999999">'
-               +'<span class="extra">'+fileTitle1+'</span>'
-               +paddedCount
-               +'<span class="extra">'+fileTitle2+'</span>'
-            +'</a>'
-            +(count%100 == 0 ? '<br/>' : ' ');
-      }
-
-
-      // insert file list in target
-      node.innerHTML = html;
-   }
+        nodeList.innerHTML  = html;
+        nodeCount.innerHTML = 'in '+countMax;
+    }
 }
 window.addEventListener('DOMContentLoaded', archives, false);
