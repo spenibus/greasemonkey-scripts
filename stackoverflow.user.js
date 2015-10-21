@@ -3,7 +3,7 @@
 // @namespace   stackoverflow@spenibus
 // @include     http*://stackoverflow.com/*
 // @include     http*://*.stackoverflow.com/*
-// @version     20150923-0255
+// @version     20151021-1547
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
