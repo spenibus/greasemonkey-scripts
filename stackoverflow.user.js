@@ -34,7 +34,7 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
     window.addEventListener('DOMContentLoaded', function(){
 
         // pattern
-        var r = /^\s*(\d+)(.*)/gm
+        var r = /^\s*([\d,]+)(.*)/gm
 
         // collect counts
         var stats = {};
@@ -46,23 +46,23 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
         // matches holder
         var m;
 
+        var labels = [
+            'total flags',
+            'waiting for review',
+            'helpful',
+            'declined',
+            'disputed',
+        ];
+
 
         // init to zero
-        for(
-            var i of [
-                'moderator attention flags',
-                'waiting for review',
-                'deemed helpful',
-                'declined',
-                'disputed',
-            ]
-        ) {
+        for(var i of labels) {
             stats[i] = 0;
         }
 
-
         while(m = r.exec(s)) {
 
+            m[1] = m[1].replace(',', '');
             if(!stats[m[2]]) {
                 stats[m[2]] = 0;
             }
@@ -70,19 +70,20 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
             stats[m[2]] += parseInt(m[1]);
         }
 
-        var processedCount = (stats['deemed helpful'] + stats['disputed'] + stats['declined']) || 0;
+
+        var processedCount = (stats[labels[2]] + stats[labels[4]] + stats[labels[3]]) || 0;
 
         var factorProcessed = 100 / (processedCount || 1);
-        var factorTotal     = 100 / (stats['moderator attention flags'] || 1); // (stats['deemed helpful'] + stats['declined']);
+        var factorTotal     = 100 / (stats[labels[0]] || 1);
 
-        var extraFlagsCount = stats['deemed helpful'] - stats['declined'];
+        var extraFlagsCount = stats[labels[2]] - stats[labels[3]];
         var extraFlags      = Math.floor(extraFlagsCount/10);
 
-        var lost = stats['moderator attention flags']
-            - stats['deemed helpful']
-            - stats['disputed']
-            - stats['declined']
-            - stats['waiting for review'];
+        var lost = stats[labels[0]]
+            - stats[labels[2]]
+            - stats[labels[3]]
+            - stats[labels[4]]
+            - stats[labels[1]];
 
         var ns = document.createElement('div');
         ns.setAttribute('style', 'border:1px solid #000; padding:4px; margin:4px;');
@@ -93,32 +94,32 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
                 +'</tr>'
                 +'<tr>'
                     +'<td>'+processedCount+'</td>'
-                    +'<td>'+fixedRound(factorTotal * stats['moderator attention flags'], 2)+'%</td>'
-                    +'<td>'+stats['moderator attention flags']+'</td>'
+                    +'<td>'+fixedRound(factorTotal * stats[labels[0]], 2)+'%</td>'
+                    +'<td>'+stats[labels[0]]+'</td>'
                     +'<td>total</td>'
                 +'</tr>'
                 +'<tr style="color:#080;">'
-                    +'<td>'+fixedRound(factorProcessed * stats['deemed helpful'], 2)+'%</td>'
-                    +'<td>'+fixedRound(factorTotal * stats['deemed helpful'], 2)+'%</td>'
-                    +'<td>'+stats['deemed helpful']+'</td>'
+                    +'<td>'+fixedRound(factorProcessed * stats[labels[2]], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats[labels[2]], 2)+'%</td>'
+                    +'<td>'+stats[labels[2]]+'</td>'
                     +'<td>helpful</td>'
                 +'</tr>'
                 +'<tr style="color:#880;">'
-                    +'<td>'+fixedRound(factorProcessed * stats['disputed'], 2)+'%</td>'
-                    +'<td>'+fixedRound(factorTotal * stats['disputed'], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorProcessed * stats[labels[4]], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats[labels[4]], 2)+'%</td>'
                     +'<td>'+stats['disputed']+'</td>'
                     +'<td>disputed</td>'
                 +'</tr>'
                 +'<tr style="color:#800;">'
-                    +'<td>'+fixedRound(factorProcessed * stats['declined'], 2)+'%</td>'
-                    +'<td>'+fixedRound(factorTotal * stats['declined'], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorProcessed * stats[labels[3]], 2)+'%</td>'
+                    +'<td>'+fixedRound(factorTotal * stats[labels[3]], 2)+'%</td>'
                     +'<td>'+stats['declined']+'</td>'
                     +'<td>declined</td>'
                 +'</tr>'
                 +'<tr style="color:#888;">'
                     +'<td></td>'
-                    +'<td>'+fixedRound(factorTotal * stats['waiting for review'], 2)+'%</td>'
-                    +'<td>'+stats['waiting for review']+'</td>'
+                    +'<td>'+fixedRound(factorTotal * stats[labels[1]], 2)+'%</td>'
+                    +'<td>'+stats[labels[1]]+'</td>'
                     +'<td>waiting</td>'
                 +'</tr>'
                 +'<tr style="color:#888;">'
@@ -132,7 +133,7 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
                 +'</tr>'
                 +'<tr>'
                     +'<td colspan="99" class="sep">helpful/declined ratio<br />'
-                        +fixedRound(stats['deemed helpful']/(stats['declined']||1), 2)+'</td>'
+                        +fixedRound(stats[labels[2]]/(stats[labels[3]]||1), 2)+'</td>'
                 +'</tr>'
             +'</table>';
 
