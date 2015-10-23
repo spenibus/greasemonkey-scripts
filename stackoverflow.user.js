@@ -3,7 +3,7 @@
 // @namespace   stackoverflow@spenibus
 // @include     http*://stackoverflow.com/*
 // @include     http*://*.stackoverflow.com/*
-// @version     20151021-1547
+// @version     20151023-1941
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
@@ -33,57 +33,51 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
 
     window.addEventListener('DOMContentLoaded', function(){
 
-        // pattern
-        var r = /^\s*([\d,]+)(.*)/gm
-
-        // collect counts
-        var stats = {};
-
-        // get flags text
-        var n = document.getElementById('flag-stat-info-table');
-        var s = n.textContent;
-
-        // matches holder
-        var m;
-
         var labels = [
-            'total flags',
+            '-',
             'waiting for review',
             'helpful',
             'declined',
             'disputed',
+            'aged away',
         ];
 
+        // pattern
+        //var r = /\s*([\d,]+)\s*(.*)/g
+        var r = new RegExp('([\\d,]+)\\s*('+labels.join('|')+')', 'g');
+
+        // collect counts
+        var stats = {};
 
         // init to zero
         for(var i of labels) {
             stats[i] = 0;
         }
 
+        // get flags text
+        var n = document.getElementById('flag-stat-info-table');
+        var s = n.textContent;
+
+        var m;
         while(m = r.exec(s)) {
-
             m[1] = m[1].replace(',', '');
-            if(!stats[m[2]]) {
-                stats[m[2]] = 0;
-            }
-
             stats[m[2]] += parseInt(m[1]);
         }
 
-
-        var processedCount = (stats[labels[2]] + stats[labels[4]] + stats[labels[3]]) || 0;
+        var total          = (stats[labels[1]] + stats[labels[2]] + stats[labels[3]] + stats[labels[4]] + stats[labels[5]]) || 0;
+        var processedCount = (stats[labels[2]] + stats[labels[3]] + stats[labels[4]]) || 0;
 
         var factorProcessed = 100 / (processedCount || 1);
-        var factorTotal     = 100 / (stats[labels[0]] || 1);
+        var factorTotal     = 100 / (total || 1);
 
         var extraFlagsCount = stats[labels[2]] - stats[labels[3]];
         var extraFlags      = Math.floor(extraFlagsCount/10);
 
-        var lost = stats[labels[0]]
+        var lost = total
+            - stats[labels[1]]
             - stats[labels[2]]
             - stats[labels[3]]
-            - stats[labels[4]]
-            - stats[labels[1]];
+            - stats[labels[4]];
 
         var ns = document.createElement('div');
         ns.setAttribute('style', 'border:1px solid #000; padding:4px; margin:4px;');
@@ -94,8 +88,8 @@ if(loc.pathname.substr(0,19) =='/users/flag-summary') {
                 +'</tr>'
                 +'<tr>'
                     +'<td>'+processedCount+'</td>'
-                    +'<td>'+fixedRound(factorTotal * stats[labels[0]], 2)+'%</td>'
-                    +'<td>'+stats[labels[0]]+'</td>'
+                    +'<td>'+fixedRound(factorTotal * total, 2)+'%</td>'
+                    +'<td>'+total+'</td>'
                     +'<td>total</td>'
                 +'</tr>'
                 +'<tr style="color:#080;">'
