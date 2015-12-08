@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://escapistmagazine.com/*
 // @include     http*://*.escapistmagazine.com/*
-// @version     20151208-0016
+// @version     20151208-0022
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
@@ -61,13 +61,11 @@ if(loc.pathname.substr(0,13) == '/videos/view/') {
         box.set('time');
         var timeStr = '';
 
-        var timeSrc = document
-            .getElementById('video_detail_header')
-            .childNodes[1].innerHTML.match(/^.*\| (.*)$/)[1];
+        var timeSrc = document.querySelector('#video_detail_header .publish_time');
 
         if(timeSrc) {
             //var timeStr = SGL.timeFormat('Y-m-d H:i:s O', Date.parse(timeSrc));
-            var timeStr = SGL.timeFormatUTC('Y-m-d H:i:s', Date.parse(timeSrc))+' GMT';
+            var timeStr = SGL.timeFormatUTC('Y-m-d H:i:s', Date.parse(timeSrc.textContent))+' GMT';
         }
 
 
