@@ -1,28 +1,41 @@
-My greasemonkey scripts.
-http://spenibus.net
-https://github.com/spenibus/greasemonkey-scripts
-https://gitlab.com/spenibus/greasemonkey-scripts
+My greasemonkey scripts
+=======================
+
+
+- http://spenibus.net
+- https://github.com/spenibus/greasemonkey-scripts
+- https://gitlab.com/spenibus/greasemonkey-scripts
 
 
 escapistmagazine
+----------------
+
     - video download links
 
 
 hitbox
+------
+
     - archive download links
         - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
         - most of the link text is hidden for readability but remains useable regarding the previous point
 
 
 jeuxvideocom
+------------
+
     - video download links
 
 
 stackoverflow
+-------------
+
     - flags stats
 
 
 twitch
+------
+
     - quick links to popout and chat
     - live playlist links
     - archive download links
@@ -31,6 +44,8 @@ twitch
 
 
 youtube
+-------
+
     - disables ytspf (ajax page loading & history.pushState)
     - video download links
         - link text is formatted (a download manager such as DownThemAll can use that info for the filename)
