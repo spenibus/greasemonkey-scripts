@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20151020-0007
+// @version     20160615-0122
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -20,7 +20,29 @@ var loc = document.location;
 
 
 /********************************************************************* config */
-var cfg = {};
+var cfg = {
+    currentUrl : null,
+};
+
+
+
+
+/*******************************************************************************
+********************************************************************************
+********************************************************************************
+********************************************************************** events */
+unsafeWindow.history.pushState = exportFunction(function() {
+   dispatchEvent(new Event('pushState'));
+   return history.pushState.apply(history, arguments);
+}, unsafeWindow);
+
+
+
+
+unsafeWindow.history.replaceState = exportFunction(function() {
+   dispatchEvent(new Event('replaceState'));
+   return history.replaceState.apply(history, arguments);
+}, unsafeWindow);
 
 
 
@@ -203,6 +225,42 @@ window.addEventListener('DOMContentLoaded', reloadButtons, false);
 /*******************************************************************************
 ********************************************************************************
 ********************************************************************************
+************************************* auto reload on ajax loading via history */
+window.addEventListener('pushState', function(e){
+
+    // poll location until change
+    var check = setInterval(function(){
+
+        // detect url change
+        if(cfg.currentUrl != loc.href) {
+
+            // stop polling
+            clearInterval(check);
+
+            // remember current url
+            cfg.currentUrl = loc.href;
+
+            // trigger reload
+            window.dispatchEvent(
+                new Event('DOMContentLoaded')
+            );
+        }
+    }, 250);
+}, false);
+
+/*
+window.addEventListener('replaceState', function(e){
+    console.log('replaceState');
+    console.log(loc);
+}, false);
+*/
+
+
+
+
+/*******************************************************************************
+********************************************************************************
+********************************************************************************
 ***************************************************************** quick links */
 function quickLinks() {
 
@@ -224,9 +282,9 @@ function quickLinks() {
    var box = SGL.displayBox('spenibusQuickLinks');
    box.set(''
       +'<div>'
-         +'<a href="http://www.twitch.tv/'+channel+'/popout">popout</a>'
+         +'<a href="https://player.twitch.tv/?channel='+channel+'">popout</a>'
          +' &bull; '
-         +'<a href="http://www.twitch.tv/'+channel+'/chat">chat</a>'
+         +'<a href="https://www.twitch.tv/'+channel+'/chat">chat</a>'
       +'</div>'
    );
 }
@@ -244,7 +302,7 @@ function live() {
    //***************************************************************** some vars
    var vars = {
       channel : getChannel(),
-      isLive  : false,
+      isLive  : 0, // 0: checking (unknown); 1: yes; 2: no
       viewers : 0,
       quality : {
          'high'   : '720p',
@@ -256,6 +314,13 @@ function live() {
       playlistHtml : '',
       streams      : {},
    };
+
+
+   // create container
+   var box = SGL.displayBox('spenibusLiveLinkBox');
+
+   // clear container
+   box.set('');
 
 
    //******************************************************* abort if no channel
@@ -276,13 +341,17 @@ function live() {
          +'height:8px;'
          +'background-color:#888;'
       +'}'
+      // live checking
+      +'#spenibusLiveLinkBox > .live.checking {'
+         +'background-color:#F80;'
+      +'}'
       // live on
       +'#spenibusLiveLinkBox > .live.on {'
          +'background-color:#0A0;'
       +'}'
       // live off
       +'#spenibusLiveLinkBox > .live.off {'
-         +'background-color:#A00;'
+         +'background-color:#C00;'
       +'}'
       // playlist
       +'#spenibusLiveLinkBox > div.playlist {'
@@ -324,8 +393,6 @@ function live() {
       +'}'
    );
 
-   // create container
-   var box = SGL.displayBox('spenibusLiveLinkBox');
 
    //box.set('init live');
    livePresent('init live');
@@ -352,18 +419,20 @@ function live() {
 
       // not a user, abort
       if(content.status == 404 || content.status == 422) {
+         vars.isLive = 2;
          livePresent('not a user');
          return;
       }
 
       // channel offline, abort
       if(content.stream == null) {
+         vars.isLive = 2;
          livePresent('no stream');
          return;
       }
 
       // channel is live
-      vars.isLive  = true;
+      vars.isLive  = 1;
       vars.viewers = content.stream ? content.stream.viewers : 0;
 
       // get token
@@ -507,9 +576,9 @@ function live() {
    //************************************************************** present info
    function livePresent(msg) {
       box.set(''
-         +'<div class="live '+(vars.isLive ? 'on' : 'off')+'"></div>'
+         +'<div class="live '+(['checking', 'on', 'off'][vars.isLive])+'"></div>'
          +'<div class="infos">'
-            +'<div>'+(vars.isLive ? 'online' : 'offline')+'</div>'
+            +'<div>'+(['checking', 'online', 'offline'][vars.isLive])+'</div>'
             +'<div>'+vars.viewers+' viewers</div>'
             +'<div>'+(msg ? msg : '')+'</div>'
          +'</div>'
@@ -625,8 +694,14 @@ function archives() {
    var data = {
       'chunksMutedCount' : 0,
    };
-   // box reference
-   var box;
+
+
+   // make box
+   var box = SGL.displayBox('spenibusVideoLinkBox');
+
+
+   // clear container
+   box.set('');
 
 
    //********************************** start the chain reaction: get archive id
@@ -662,8 +737,6 @@ function archives() {
          'c':'c'
       }[data.type] + data.vodId;
 
-      // make box
-      box = SGL.displayBox('spenibusVideoLinkBox');
       box.set('init archives');
 
       // set style
