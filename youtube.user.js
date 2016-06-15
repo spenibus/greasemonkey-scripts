@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20160615-0420
+// @version     20160615-0508
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -182,11 +182,7 @@ function videoLinks() {
     var user = (function(){
         box.set('fetching user');
 
-        var id = document.querySelector('span[itemprop=author] > link[itemprop=url]');
-        id = id.href
-            ? id.href.match(/(?:user|channel)\/(.*)/)
-            : ['',''];
-        id = id[1];
+        var id = document.querySelector('meta[itemprop=channelId]').getAttribute('content');
 
         var name = document.querySelector('div[class=yt-user-info] > a[data-ytid='+id+']');
         name = name.text;
