@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160615-0122
+// @version     20160711-2140
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -32,16 +32,16 @@ var cfg = {
 ********************************************************************************
 ********************************************************************** events */
 unsafeWindow.history.pushState = exportFunction(function() {
-   dispatchEvent(new Event('pushState'));
-   return history.pushState.apply(history, arguments);
+    dispatchEvent(new Event('pushState'));
+    return history.pushState.apply(history, arguments);
 }, unsafeWindow);
 
 
 
 
 unsafeWindow.history.replaceState = exportFunction(function() {
-   dispatchEvent(new Event('replaceState'));
-   return history.replaceState.apply(history, arguments);
+    dispatchEvent(new Event('replaceState'));
+    return history.replaceState.apply(history, arguments);
 }, unsafeWindow);
 
 
@@ -57,8 +57,8 @@ unsafeWindow.history.replaceState = exportFunction(function() {
 
 /*********************************************************** get channel name */
 function getChannel() {
-   var m = loc.pathname.match(/^\/([^\/]+)/);
-   return m ? m[1].toLowerCase() : null;
+    var m = loc.pathname.match(/^\/([^\/]+)/);
+    return m ? m[1].toLowerCase() : null;
 }
 
 
@@ -69,29 +69,29 @@ function getChannel() {
 // 3.2.  Attribute Lists
 function metaParse(str) {
 
-   var metaObj = {};
+    var metaObj = {};
 
-   var regexAttr = [
-      '[0-9]*',
-      '0x[0-9a-f]*',
-      '[0-9\.]*',
-      '"(.*?)"',
-      '[^",\\s]*',
-      '[0-9]x[0-9]',
-   ];
+    var regexAttr = [
+        '[0-9]*',
+        '0x[0-9a-f]*',
+        '[0-9\.]*',
+        '"(.*?)"',
+        '[^",\\s]*',
+        '[0-9]x[0-9]',
+    ];
 
-   var regex = new RegExp(
-      '([a-z\\-]+)=('+regexAttr.join('|')+')(,|$)',
-      'gi'
-   );
+    var regex = new RegExp(
+        '([a-z\\-]+)=('+regexAttr.join('|')+')(,|$)',
+        'gi'
+    );
 
-   var bits = str.split(':');
+    var bits = str.split(':');
 
-   for(var m; m=regex.exec(bits[1]); null) {
-      metaObj[m[1]] = m[3] || m[2];
-   }
+    for(var m; m=regex.exec(bits[1]); null) {
+        metaObj[m[1]] = m[3] || m[2];
+    }
 
-   return [bits[0].substr(7), metaObj];
+    return [bits[0].substr(7), metaObj];
 };
 
 
@@ -100,78 +100,74 @@ function metaParse(str) {
 /***************************************************************** m3u parser */
 function playlistParse(str) {
 
-   // no carriage returns
-   str = str.replace(/\r/g, '');
+    // no carriage returns
+    str = str.replace(/\r/g, '');
 
-   // split by newlines
-   var lines = str.split('\n');
+    // split by newlines
+    var lines = str.split('\n');
 
-   // prepare output
-   var items = [];
+    // prepare output
+    var items = [];
 
-   // go through lines
-   for(var i=0; i<lines.length; ++i) {
+    // go through lines
+    for(var i=0; i<lines.length; ++i) {
 
-      // shorthand
-      var line = lines[i];
+        // shorthand
+        var line = lines[i];
 
-      // new item
-      if(!item) {
-         var item = {
-            meta : {},
-            url  : '',
-         };
-      }
+        // new item
+        if(!item) {
+            var item = {
+                meta : {},
+                url  : '',
+            };
+        }
 
 
-      // metadata: twitch
-      if(line.substr(0,14) == '#EXT-X-TWITCH-') {
+        // metadata: twitch
+        if(line.substr(0,14) == '#EXT-X-TWITCH-') {
+            var tmp = line.split(':');
+            item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
+        }
 
-         var tmp = line.split(':');
-         item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
-      }
+        // metadata: playlist datetime
+        else if(line.substr(0,15) == '#ID3-EQUIV-TDTG') {
+            var tmp = line.split(':');
+            item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
+        }
 
-      // metadata: playlist datetime
-      else if(line.substr(0,15) == '#ID3-EQUIV-TDTG') {
+        // metadata
+        else if(line.substr(0,7) == '#EXT-X-') {
+            var tmp = metaParse(line);
+            item['meta'][tmp[0]] = tmp[1];
+        }
 
-         var tmp = line.split(':');
-         item['meta'][tmp[0]] = tmp.splice(1,tmp.length).join(':');
-      }
+        // extinf
+        else if(line.substr(0,7) == '#EXTINF') {
+            // don't care
+        }
 
-      // metadata
-      else if(line.substr(0,7) == '#EXT-X-') {
+        // unexpected metadata
+        else if(line.substr(0,1) == '#') {
+            // don't care
+        }
 
-         var tmp = metaParse(line);
-         item['meta'][tmp[0]] = tmp[1];
-      }
+        // empty (generally end of file)
+        else if(!line) {
+            // don't care
+        }
 
-      // extinf
-      else if(line.substr(0,7) == '#EXTINF') {
-         // don't care
-      }
+        // assume url
+        else {
+            item['url'] = line;
+            items.push(item);
 
-      // unexpected metadata
-      else if(line.substr(0,1) == '#') {
-         // don't care
-      }
+            // reset item
+            item = null;
+        }
+    }
 
-      // empty (generally end of file)
-      else if(!line) {
-         // don't care
-      }
-
-      // assume url
-      else {
-
-         item['url'] = line;
-         items.push(item);
-
-         // reset item
-         item = null;
-      }
-   }
-
-   return items;
+    return items;
 }
 
 
@@ -183,39 +179,38 @@ function playlistParse(str) {
 ************************************************************** reload buttons */
 function reloadButtons() {
 
+    SGL.css(''
+        // hide by default
+        +'#spenibusReload {'
+            +'display:none;'
+        +'}'
+        // show on container hover
+        +':hover > #spenibusReload {'
+            +'display:block;'
+        +'}'
+        // button
+        +'#spenibusReload button {'
+            +'font-weight:bold;'
+            +'margin:4px;'
+            +'padding:0 4px;'
+        +'}'
+    );
 
-   SGL.css(''
-      // hide by default
-      +'#spenibusReload {'
-         +'display:none;'
-      +'}'
-      // show on container hover
-      +':hover > #spenibusReload {'
-         +'display:block;'
-      +'}'
-      // button
-      +'#spenibusReload button {'
-         +'font-weight:bold;'
-         +'margin:4px;'
-         +'padding:0 4px;'
-      +'}'
-   );
+    var box = SGL.displayBox('spenibusReload');
 
-   var box = SGL.displayBox('spenibusReload');
+    // button name : function
+    var list = {
+        'reload live'     : live,
+        'reload archives' : archives,
+    }
 
-   // button name : function
-   var list = {
-      'reload live'     : live,
-      'reload archives' : archives,
-   }
-
-   box.set('');
-   for(var i in list) {
-      var button = document.createElement('button');
-      button.textContent = i;
-      button.addEventListener('click', list[i], false);
-      box.node.appendChild(button);
-   }
+    box.set('');
+    for(var i in list) {
+        var button = document.createElement('button');
+        button.textContent = i;
+        button.addEventListener('click', list[i], false);
+        box.node.appendChild(button);
+    }
 }
 window.addEventListener('DOMContentLoaded', reloadButtons, false);
 
@@ -264,29 +259,29 @@ window.addEventListener('replaceState', function(e){
 ***************************************************************** quick links */
 function quickLinks() {
 
-   var channel = getChannel();
+    var channel = getChannel();
 
-   SGL.css(''
-      // hide by default
-      +'#spenibusQuickLinks {'
-         +'white-space:nowrap;'
-         +'overflow:hidden;'
-         +'display:none;'
-      +'}'
-      // show on container hover
-      +':hover > #spenibusQuickLinks {'
-         +'display:block;'
-      +'}'
-   );
+    SGL.css(''
+        // hide by default
+        +'#spenibusQuickLinks {'
+            +'white-space:nowrap;'
+            +'overflow:hidden;'
+            +'display:none;'
+        +'}'
+        // show on container hover
+        +':hover > #spenibusQuickLinks {'
+            +'display:block;'
+        +'}'
+    );
 
-   var box = SGL.displayBox('spenibusQuickLinks');
-   box.set(''
-      +'<div>'
-         +'<a href="https://player.twitch.tv/?channel='+channel+'">popout</a>'
-         +' &bull; '
-         +'<a href="https://www.twitch.tv/'+channel+'/chat">chat</a>'
-      +'</div>'
-   );
+    var box = SGL.displayBox('spenibusQuickLinks');
+    box.set(''
+        +'<div>'
+            +'<a href="https://player.twitch.tv/?channel='+channel+'">popout</a>'
+            +' &bull; '
+            +'<a href="https://www.twitch.tv/'+channel+'/chat">chat</a>'
+        +'</div>'
+    );
 }
 window.addEventListener('DOMContentLoaded', quickLinks, false);
 
@@ -299,292 +294,292 @@ window.addEventListener('DOMContentLoaded', quickLinks, false);
 ************************************************************ live video links */
 function live() {
 
-   //***************************************************************** some vars
-   var vars = {
-      channel : getChannel(),
-      isLive  : 0, // 0: checking (unknown); 1: yes; 2: no
-      viewers : 0,
-      quality : {
-         'high'   : '720p',
-         'medium' : '480p',
-         'low'    : '360p',
-         'mobile' : '226p',
-      },
-      playlistUrl  : '',
-      playlistHtml : '',
-      streams      : {},
-   };
+    //**************************************************************** some vars
+    var vars = {
+        channel : getChannel(),
+        isLive  : 0, // 0: checking (unknown); 1: yes; 2: no
+        viewers : 0,
+        quality : {
+            'high'   : '720p',
+            'medium' : '480p',
+            'low'    : '360p',
+            'mobile' : '226p',
+        },
+        playlistUrl  : '',
+        playlistHtml : '',
+        streams      : {},
+    };
 
 
-   // create container
-   var box = SGL.displayBox('spenibusLiveLinkBox');
+    // create container
+    var box = SGL.displayBox('spenibusLiveLinkBox');
 
-   // clear container
-   box.set('');
-
-
-   //******************************************************* abort if no channel
-   if(!vars.channel) {
-      return;
-   }
-
-   // set style
-   SGL.css(''
-      // box
-      +'#spenibusLiveLinkBox {'
-         +'white-space:nowrap;'
-         +'overflow:hidden;'
-      +'}'
-      // live
-      +'#spenibusLiveLinkBox > .live {'
-         +'width:8px;'
-         +'height:8px;'
-         +'background-color:#888;'
-      +'}'
-      // live checking
-      +'#spenibusLiveLinkBox > .live.checking {'
-         +'background-color:#F80;'
-      +'}'
-      // live on
-      +'#spenibusLiveLinkBox > .live.on {'
-         +'background-color:#0A0;'
-      +'}'
-      // live off
-      +'#spenibusLiveLinkBox > .live.off {'
-         +'background-color:#C00;'
-      +'}'
-      // playlist
-      +'#spenibusLiveLinkBox > div.playlist {'
-         +'text-align:right;'
-         +'display:none;'
-      +'}'
-      // playlist
-      +':hover > #spenibusLiveLinkBox > div.playlist {'
-         +'display:table;'
-      +'}'
-      // rows
-      +'#spenibusLiveLinkBox > div.playlist > div {'
-         +'display:table-row;'
-      +'}'
-      // cells
-      +'#spenibusLiveLinkBox > div.playlist > div > * {'
-         +'display:table-cell;'
-         +'padding:2px 4px;'
-      +'}'
-      // cells: vertical grid lines
-      +'#spenibusLiveLinkBox > div.playlist > div > * + * {'
-         +'border-left:1px solid #888;'
-      +'}'
-      // cells: horizontal grid lines
-      +'#spenibusLiveLinkBox > div.playlist > div + div > * {'
-         +'border-top:1px solid #888;'
-      +'}'
-      // highlight cells on row hover
-      +'#spenibusLiveLinkBox > div.playlist > div:hover > * {'
-         +'background-color:#FDA;'
-      +'}'
-      // infos box
-      +'#spenibusLiveLinkBox > div.infos {'
-         +'display:none;'
-      +'}'
-      // show infos box
-      +':hover > #spenibusLiveLinkBox > div.infos {'
-         +'display:block;'
-      +'}'
-   );
+    // clear container
+    box.set('');
 
 
-   //box.set('init live');
-   livePresent('init live');
+    //****************************************************** abort if no channel
+    if(!vars.channel) {
+        return;
+    }
+
+    // set style
+    SGL.css(''
+        // box
+        +'#spenibusLiveLinkBox {'
+            +'white-space:nowrap;'
+            +'overflow:hidden;'
+        +'}'
+        // live
+        +'#spenibusLiveLinkBox > .live {'
+            +'width:8px;'
+            +'height:8px;'
+            +'background-color:#888;'
+        +'}'
+        // live checking
+        +'#spenibusLiveLinkBox > .live.checking {'
+            +'background-color:#F80;'
+        +'}'
+        // live on
+        +'#spenibusLiveLinkBox > .live.on {'
+            +'background-color:#0A0;'
+        +'}'
+        // live off
+        +'#spenibusLiveLinkBox > .live.off {'
+            +'background-color:#C00;'
+        +'}'
+        // playlist
+        +'#spenibusLiveLinkBox > div.playlist {'
+            +'text-align:right;'
+            +'display:none;'
+        +'}'
+        // playlist
+        +':hover > #spenibusLiveLinkBox > div.playlist {'
+            +'display:table;'
+        +'}'
+        // rows
+        +'#spenibusLiveLinkBox > div.playlist > div {'
+            +'display:table-row;'
+        +'}'
+        // cells
+        +'#spenibusLiveLinkBox > div.playlist > div > * {'
+            +'display:table-cell;'
+            +'padding:2px 4px;'
+        +'}'
+        // cells: vertical grid lines
+        +'#spenibusLiveLinkBox > div.playlist > div > * + * {'
+            +'border-left:1px solid #888;'
+        +'}'
+        // cells: horizontal grid lines
+        +'#spenibusLiveLinkBox > div.playlist > div + div > * {'
+            +'border-top:1px solid #888;'
+        +'}'
+        // highlight cells on row hover
+        +'#spenibusLiveLinkBox > div.playlist > div:hover > * {'
+            +'background-color:#FDA;'
+        +'}'
+        // infos box
+        +'#spenibusLiveLinkBox > div.infos {'
+            +'display:none;'
+        +'}'
+        // show infos box
+        +':hover > #spenibusLiveLinkBox > div.infos {'
+            +'display:block;'
+        +'}'
+    );
 
 
-   //************************************* start chain reaction: get live status
-   (function(){
-
-      GM_xmlhttpRequest({
-         url    : 'https://api.twitch.tv/kraken/streams/'+vars.channel,
-         method : 'GET',
-         onload : liveHandler,
-      });
-
-      //box.set('checking live status');
-      livePresent('checking live status');
-   })();
+    //box.set('init live');
+    livePresent('init live');
 
 
-   //************************************************************** live handler
-   function liveHandler(xhr) {
+    //************************************ start chain reaction: get live status
+    (function(){
 
-      var content = JSON.parse(xhr.responseText);
+        GM_xmlhttpRequest({
+            url    : 'https://api.twitch.tv/kraken/streams/'+vars.channel,
+            method : 'GET',
+            onload : liveHandler,
+        });
 
-      // not a user, abort
-      if(content.status == 404 || content.status == 422) {
-         vars.isLive = 2;
-         livePresent('not a user');
-         return;
-      }
-
-      // channel offline, abort
-      if(content.stream == null) {
-         vars.isLive = 2;
-         livePresent('no stream');
-         return;
-      }
-
-      // channel is live
-      vars.isLive  = 1;
-      vars.viewers = content.stream ? content.stream.viewers : 0;
-
-      // get token
-      GM_xmlhttpRequest({
-         url    : 'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token',
-         method : 'GET',
-         onload : tokenHandler,
-      });
-
-      //box.set('fetching token');
-      livePresent('fetching token');
-   }
+        //box.set('checking live status');
+        livePresent('checking live status');
+    })();
 
 
-   //************************************************************* token handler
-   function tokenHandler(xhr) {
+    //************************************************************* live handler
+    function liveHandler(xhr) {
 
-      var token = JSON.parse(xhr.responseText);
+        var content = JSON.parse(xhr.responseText);
 
-      // no token or sig, exit
-      if(token.token == null || token.sig == null) {
-         //box.set('no token/sig');
-         livePresent('no token/sig');
-         return false;
-      }
+        // not a user, abort
+        if(content.status == 404 || content.status == 422) {
+            vars.isLive = 2;
+            livePresent('not a user');
+            return;
+        }
 
-      vars.token = token.token;
-      vars.sig   = token.sig;
+        // channel offline, abort
+        if(content.stream == null) {
+            vars.isLive = 2;
+            livePresent('no stream');
+            return;
+        }
 
-      // build playlist url
-      vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8'
-         +'?allow_source=true'
-         +'&sig='+escape(vars.sig)
-         +'&token='+escape(vars.token);
+        // channel is live
+        vars.isLive  = 1;
+        vars.viewers = content.stream ? content.stream.viewers : 0;
 
-      // get playlist
-      GM_xmlhttpRequest({
-         url    : vars.playlistUrl,
-         method : 'GET',
-         onload : playlistHandler,
-      });
+        // get token
+        GM_xmlhttpRequest({
+            url    : 'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token',
+            method : 'GET',
+            onload : tokenHandler,
+        });
 
-      //box.set('fetching playlist');
-      livePresent('fetching playlist');
-   }
+        //box.set('fetching token');
+        livePresent('fetching token');
+    }
 
 
-   //********************************************************** playlist handler
-   function playlistHandler(xhr) {
+    //************************************************************* token handler
+    function tokenHandler(xhr) {
 
-      var playlist = xhr.responseText;
+        var token = JSON.parse(xhr.responseText);
 
-      // not a playlist, abort
-      if(playlist.substr(0,7) != '#EXTM3U') {
-         livePresent('not a playlist');
-         return;
-      }
+        // no token or sig, exit
+        if(token.token == null || token.sig == null) {
+            //box.set('no token/sig');
+            livePresent('no token/sig');
+            return false;
+        }
 
-      // parse playlist
-      var rows = playlist.split("\n");
-      for(var i=0; i<rows.length; i++) {
+        vars.token = token.token;
+        vars.sig   = token.sig;
 
-         // get meta
-         if(rows[i].substr(0,18) == '#EXT-X-STREAM-INF:') {
+        // build playlist url
+        vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8'
+            +'?allow_source=true'
+            +'&sig='+escape(vars.sig)
+            +'&token='+escape(vars.token);
 
-            // get metadata
-            var metadata      = {};
-            var metadataPairs = rows[i].substr(18).split(',');
+        // get playlist
+        GM_xmlhttpRequest({
+            url    : vars.playlistUrl,
+            method : 'GET',
+            onload : playlistHandler,
+        });
 
-            for(var j=0; j<metadataPairs.length; j++) {
+        //box.set('fetching playlist');
+        livePresent('fetching playlist');
+    }
 
-               var pair = metadataPairs[j].split('=');
 
-               if(pair[0] == 'VIDEO') {
-                  pair[1] = pair[1].substr(1, pair[1].length-2);
-               }
+    //********************************************************** playlist handler
+    function playlistHandler(xhr) {
 
-               metadata[pair[0]] = pair[1];
+        var playlist = xhr.responseText;
+
+        // not a playlist, abort
+        if(playlist.substr(0,7) != '#EXTM3U') {
+            livePresent('not a playlist');
+            return;
+        }
+
+        // parse playlist
+        var rows = playlist.split("\n");
+        for(var i=0; i<rows.length; i++) {
+
+            // get meta
+            if(rows[i].substr(0,18) == '#EXT-X-STREAM-INF:') {
+
+                // get metadata
+                var metadata      = {};
+                var metadataPairs = rows[i].substr(18).split(',');
+
+                for(var j=0; j<metadataPairs.length; j++) {
+
+                var pair = metadataPairs[j].split('=');
+
+                if(pair[0] == 'VIDEO') {
+                    pair[1] = pair[1].substr(1, pair[1].length-2);
+                }
+
+                metadata[pair[0]] = pair[1];
+                }
+
+                // get url
+                var url = rows[i+1];
+                url = url.substr(0,4) == 'http' ? url : null;
+
+                // streams list: add metadata
+                vars.streams[metadata.VIDEO] = metadata;
+
+                // streams list: add stream url
+                vars.streams[metadata.VIDEO].URL = url;
+            }
+        }
+
+        // process the streams
+        streamsHandler();
+    }
+
+
+    //*********************************************************** streams handler
+    function streamsHandler() {
+
+        //box.set('processing streams');
+        livePresent('processing streams');
+
+        // init buffer
+        var html = '';
+
+        for(var i in vars.streams) {
+
+            var resolution = '-';
+            if(vars.streams[i].RESOLUTION) {
+                resolution = vars.streams[i].RESOLUTION;
+            }
+            else if(vars.quality[i]) {
+                resolution = vars.quality[i];
             }
 
-            // get url
-            var url = rows[i+1];
-            url = url.substr(0,4) == 'http' ? url : null;
+            html += ''
+                +'<div>'
+                    +'<a href="'+vars.streams[i].URL+'">'+i+'</a>'
+                    +'<div>'+resolution+'</div>'
+                    +'<div>'+Math.round(vars.streams[i].BANDWIDTH/1024)+' kibps</div>'
+                +'</div>';
+        }
 
-            // streams list: add metadata
-            vars.streams[metadata.VIDEO] = metadata;
-
-            // streams list: add stream url
-            vars.streams[metadata.VIDEO].URL = url;
-         }
-      }
-
-      // process the streams
-      streamsHandler();
-   }
-
-
-   //*********************************************************** streams handler
-   function streamsHandler() {
-
-      //box.set('processing streams');
-      livePresent('processing streams');
-
-      // init buffer
-      var html = '';
-
-      for(var i in vars.streams) {
-
-         var resolution = '-';
-         if(vars.streams[i].RESOLUTION) {
-            resolution = vars.streams[i].RESOLUTION;
-         }
-         else if(vars.quality[i]) {
-            resolution = vars.quality[i];
-         }
-
-         html += ''
-            +'<div>'
-               +'<a href="'+vars.streams[i].URL+'">'+i+'</a>'
-               +'<div>'+resolution+'</div>'
-               +'<div>'+Math.round(vars.streams[i].BANDWIDTH/1024)+' kibps</div>'
-            +'</div>';
-      }
-
-      // finalize
-      vars.playlistHtml = ''
-         +'<div class="playlist">'
-            +'<div>'
-               +'<div><a href="'+vars.playlistUrl+'">cfg</a></div>'
-               +'<div>resolution</div>'
-               +'<div>bitrate</div>'
+        // finalize
+        vars.playlistHtml = ''
+            +'<div class="playlist">'
+                +'<div>'
+                    +'<div><a href="'+vars.playlistUrl+'">cfg</a></div>'
+                    +'<div>resolution</div>'
+                    +'<div>bitrate</div>'
+                +'</div>'
+                +html
             +'</div>'
-            +html
-         +'</div>'
 
-      // present
-      livePresent();
-   }
+        // present
+        livePresent();
+    }
 
 
-   //************************************************************** present info
-   function livePresent(msg) {
-      box.set(''
-         +'<div class="live '+(['checking', 'on', 'off'][vars.isLive])+'"></div>'
-         +'<div class="infos">'
-            +'<div>'+(['checking', 'online', 'offline'][vars.isLive])+'</div>'
-            +'<div>'+vars.viewers+' viewers</div>'
-            +'<div>'+(msg ? msg : '')+'</div>'
-         +'</div>'
-         +vars.playlistHtml
-      );
-   }
+    //************************************************************* present info
+    function livePresent(msg) {
+        box.set(''
+            +'<div class="live '+(['checking', 'on', 'off'][vars.isLive])+'"></div>'
+            +'<div class="infos">'
+                +'<div>'+(['checking', 'online', 'offline'][vars.isLive])+'</div>'
+                +'<div>'+vars.viewers+' viewers</div>'
+                +'<div>'+(msg ? msg : '')+'</div>'
+            +'</div>'
+            +vars.playlistHtml
+        );
+    }
 }
 window.addEventListener('DOMContentLoaded', live, false);
 
@@ -598,399 +593,397 @@ window.addEventListener('DOMContentLoaded', live, false);
 function archives() {
 
 
-   //*************************************************************** format time
-   function timeFormat(timestamp) {
-      if(timestamp) {
-         var date = new Date(timestamp*1000);
-         return date.getFullYear()+'-'+
-            ('0'+(date.getMonth()+1)).slice(-2)+'-'+
-            ('0'+date.getDate()).slice(-2)+' '+
-            ('0'+date.getHours()).slice(-2)+'-'+
-            ('0'+date.getMinutes()).slice(-2)+'-'+
-            ('0'+date.getSeconds()).slice(-2);
-      }
-      return 0;
-   }
+    //************************************************************** format time
+    function timeFormat(timestamp) {
+        if(timestamp) {
+            var date = new Date(timestamp*1000);
+            return date.getFullYear()+'-'+
+                ('0'+(date.getMonth()+1)).slice(-2)+'-'+
+                ('0'+date.getDate()).slice(-2)+' '+
+                ('0'+date.getHours()).slice(-2)+'-'+
+                ('0'+date.getMinutes()).slice(-2)+'-'+
+                ('0'+date.getSeconds()).slice(-2);
+        }
+        return 0;
+    }
 
 
-   //************************************* format duration from seconds to h:m:s
-   function durationFormat(secs) {
-      var h = Math.floor(secs/3600);
-      var m = ('0'+Math.floor(secs%3600/60)).slice(-2);
-      var s = ('0'+(secs%3600%60)).slice(-2);
-      return h+':'+m+':'+s;
-   }
+    //************************************ format duration from seconds to h:m:s
+    function durationFormat(secs) {
+        var h = Math.floor(secs/3600);
+        var m = ('0'+Math.floor(secs%3600/60)).slice(-2);
+        var s = ('0'+(secs%3600%60)).slice(-2);
+        return h+':'+m+':'+s;
+    }
 
 
-   //********************************************************************* style
-   var boxStyle = ''
-      +'#spenibusVideoLinkBox {'
-         +'display:table;'
-         +'white-space:nowrap;'
-      +'}'
-      +'#spenibusVideoLinkBox > div {'
-         +'display:table-row;'
-      +'}'
-      +'#spenibusVideoLinkBox > div > div {'
-         +'display:table-cell;'
-         +'padding:0px 2px;'
-      +'}'
-      // show only first cell of header row by default
-      +'#spenibusVideoLinkBox > div > div {'
-         +'display:none;'
-      +'}'
-      +'#spenibusVideoLinkBox > div:nth-of-type(1) > div:nth-of-type(1) {'
-         +'display:table-cell;'
-      +'}'
-      // show everything on container hover
-      +':hover > #spenibusVideoLinkBox > div > div {'
-         +'display:table-cell;'
-      +'}'
-      // cells: grid
-      +'#spenibusVideoLinkBox > div > div + div {'
-         +'border-left:1px solid #888;'
-      +'}'
-      +'#spenibusVideoLinkBox > div + div > div {'
-         +'border-top:1px solid #888;'
-      +'}'
-      // cells default alignment: right
-      +'#spenibusVideoLinkBox > div > div {'
-         +'text-align:right;'
-      +'}'
-      // row hover
-      +'#spenibusVideoLinkBox > div:hover > div {'
-         +'background-color:#FDA;'
-      +'}'
-      // hide extra link text
-      +'#spenibusVideoLinkBox .extra {'
-         +'display:none;'
-      +'}'
-      // chunk audio muted
-      +'#spenibusVideoLinkBox .muted {'
-         +'color:#A00;'
-      +'}'
+    //******************************************************************** style
+    var boxStyle = ''
+        +'#spenibusVideoLinkBox {'
+            +'display:table;'
+            +'white-space:nowrap;'
+        +'}'
+        +'#spenibusVideoLinkBox > div {'
+            +'display:table-row;'
+        +'}'
+        +'#spenibusVideoLinkBox > div > div {'
+            +'display:table-cell;'
+            +'padding:0px 2px;'
+        +'}'
+        // show only first cell of header row by default
+        +'#spenibusVideoLinkBox > div > div {'
+            +'display:none;'
+        +'}'
+        +'#spenibusVideoLinkBox > div:nth-of-type(1) > div:nth-of-type(1) {'
+            +'display:table-cell;'
+        +'}'
+        // show everything on container hover
+        +':hover > #spenibusVideoLinkBox > div > div {'
+            +'display:table-cell;'
+        +'}'
+        // cells: grid
+        +'#spenibusVideoLinkBox > div > div + div {'
+            +'border-left:1px solid #888;'
+        +'}'
+        +'#spenibusVideoLinkBox > div + div > div {'
+            +'border-top:1px solid #888;'
+        +'}'
+        // cells default alignment: right
+        +'#spenibusVideoLinkBox > div > div {'
+            +'text-align:right;'
+        +'}'
+        // row hover
+        +'#spenibusVideoLinkBox > div:hover > div {'
+            +'background-color:#FDA;'
+        +'}'
+        // hide extra link text
+        +'#spenibusVideoLinkBox .extra {'
+            +'display:none;'
+        +'}'
+        // chunk audio muted
+        +'#spenibusVideoLinkBox .muted {'
+            +'color:#A00;'
+        +'}'
 
-      // playlist
-      +'#spenibusVideoLinkBox > div.playlist {'
-         +'display:none;'
-      +'}'
-      // show everything on container hover
-      +':hover > #spenibusVideoLinkBox > div.playlist {'
-         +'display:block;'
-      +'}'
-      // vod list
-      +'#spenibusVideoLinkBox > div.vod  .list {'
-         +'overflow-x:auto;'
-         +'max-width:50vw;'
-         +'text-align:left;'
-      +'}'
-      +'#spenibusVideoLinkBox > div.vod  .list > :nth-child(2n) {'
-         +'background-color:rgba(0,0,0,0.25)'
-      +'}';
-
-
-   //******************************************************************* process
-   // archive data holder
-   var data = {
-      'chunksMutedCount' : 0,
-   };
+        // playlist
+        +'#spenibusVideoLinkBox > div.playlist {'
+            +'display:none;'
+        +'}'
+        // show everything on container hover
+        +':hover > #spenibusVideoLinkBox > div.playlist {'
+            +'display:block;'
+        +'}'
+        // vod list
+        +'#spenibusVideoLinkBox > div.vod  .list {'
+            +'overflow-x:auto;'
+            +'max-width:50vw;'
+            +'text-align:left;'
+        +'}'
+        +'#spenibusVideoLinkBox > div.vod  .list > :nth-child(2n) {'
+            +'background-color:rgba(0,0,0,0.25)'
+        +'}';
 
 
-   // make box
-   var box = SGL.displayBox('spenibusVideoLinkBox');
+    //****************************************************************** process
+    // archive data holder
+    var data = {
+        'chunksMutedCount' : 0,
+    };
 
 
-   // clear container
-   box.set('');
+    // make box
+    var box = SGL.displayBox('spenibusVideoLinkBox');
+
+
+    // clear container
+    box.set('');
 
 
    //********************************** start the chain reaction: get archive id
-   (function(){
+    (function(){
 
-      var path = loc.pathname;
-      var regexUrl = /\/([bcv])\/(\d+)/i;
+        var path = loc.pathname;
+        var regexUrl = /\/([bcv])\/(\d+)/i;
 
-      // get archive id+type
-      var m    = path.match(regexUrl);
-      var mRef = document.referrer.match(regexUrl);
+        // get archive id+type
+        var m    = path.match(regexUrl);
+        var mRef = document.referrer.match(regexUrl);
 
-      // try to get /b/ if current page is /v/ and referrer is /b/
-      if(m && m[1] == 'v' && mRef && mRef[1] == 'b') {
-         path = document.referrer;
-      }
+        // try to get /b/ if current page is /v/ and referrer is /b/
+        if(m && m[1] == 'v' && mRef && mRef[1] == 'b') {
+            path = document.referrer;
+        }
 
-      // get archive id+type
-      var m = path.match(regexUrl);
+        // get archive id+type
+        var m = path.match(regexUrl);
 
-      // abort if no id found
-      if(!m) {
-         return;
-      }
+        // abort if no id found
+        if(!m) {
+            return;
+        }
 
-      data.vodId = m[2];
-      data.type  = m[1];
+        data.vodId = m[2];
+        data.type  = m[1];
 
-      // store archive id
-      data.archiveId = {
-         'b':'a',
-         'v':'v',
-         'c':'c'
-      }[data.type] + data.vodId;
+        // store archive id
+        data.archiveId = {
+            'b':'a',
+            'v':'v',
+            'c':'c'
+        }[data.type] + data.vodId;
 
-      box.set('init archives');
+        box.set('init archives');
 
-      // set style
-      SGL.css(boxStyle);
+        // set style
+        SGL.css(boxStyle);
 
-      // next step
-      getVideoInfo();
-   })();
-
-
-   //***************************************************************** get token
-   /**
-   function getToken() {
+        // next step
+        getVideoInfo();
+    })();
 
 
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : 'https://api.twitch.tv/api/viewer/token.json',
-         onload : function(xhr){
+    //**************************************************************** get token
+    /**
+    function getToken() {
 
-            data.token = JSON.parse(xhr.responseText)['token'];
+        GM_xmlhttpRequest({
+            method : 'GET',
+            url    : 'https://api.twitch.tv/api/viewer/token.json',
+            onload : function(xhr){
 
-            if(!data.token) {
-               return;
+                data.token = JSON.parse(xhr.responseText)['token'];
+
+                if(!data.token) {
+                   return;
+                }
+
+                box.set('got token');
+
+                // next step
+                getVideoInfo();
+            },
+        });
+    }
+    /**/
+
+
+    //************************************************ get video info and chunks
+    function getVideoInfo() {
+
+        // update status
+        box.set('fetching video info/chunks');
+
+        // store urls
+        data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;//+'&oauth_token='+data.token;
+        data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId;//+'&oauth_token='+data.token;
+
+
+        // triage: new vod, playlist | old vod
+        var nextStep = data.type == 'v' ? getAccessToken : buildList;
+
+
+        // get video info
+        GM_xmlhttpRequest({
+            method : 'GET',
+            url    : data.infoUrl,
+            onload : function(xhr){
+
+                // store
+                data.info = xhr.responseText
+                    ? JSON.parse(xhr.responseText)
+                    : false;
+
+                     // archive start as timestamp and string
+                     data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
+                     data.startStr = timeFormat(data.start);
+
+                     // archive duration as timestamp and string
+                     data.duration    = data.info.length;
+                     data.durationStr = durationFormat(data.duration);
+
+                     // archive title as raw and windows filename safe
+                     data.title       = data.info.title;
+                     data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
+
+                     // next step
+                     nextStep();
+            },
+        });
+
+
+        // get video chunks
+        GM_xmlhttpRequest({
+            method : 'GET',
+            url    : data.chunkUrl,
+            onload : function(xhr){
+
+                // store
+                data.chunks = xhr.responseText
+                    ? JSON.parse(xhr.responseText)
+                    : false;
+                data.chunks = data.chunks && data.chunks.chunks
+                    ? data.chunks.chunks
+                    : false;
+
+                // next step
+                nextStep();
+            },
+        });
+    }
+
+
+    //********************************************************* build links list
+    function buildList() {
+
+        // need both info and chunks to be available
+        if(!data.info || !data.chunks) {
+            return;
+        }
+
+
+        // update status
+        box.set('building list');
+
+
+        // available archive qualities
+        data.qualities = [];
+        for(var quality in data.chunks) {
+            data.qualities.push(quality);
+        }
+
+        // base quality reference
+        data.qualityRef = data.qualities[0];
+
+        // archive chunks count
+        data.chunksCount = data.chunks[data.qualityRef].length;
+
+        // init output buffer
+        var html = '';
+
+        // init start time offset
+        var startOffset = 0;
+
+        // build list
+        for(var chunkId=0; chunkId<data.chunksCount; ++chunkId) {
+
+            // chunk start time as timestamp and string
+            var chunkStart    = data.start + startOffset;
+            var chunkStartStr = timeFormat(chunkStart);
+
+            // chunk duration as timestamp and string
+            var chunkDuration    = data.chunks[data.qualityRef][chunkId].length;
+            var chunkDurationStr = durationFormat(chunkDuration);
+
+            // is chunk audio muted ?
+            var chunkMuted = data.chunks[data.qualityRef][chunkId].upkeep == 'fail'
+                ? true
+                : false;
+
+            // count muted chunks
+            if(chunkMuted) {
+                ++data.chunksMutedCount;
             }
 
-            box.set('got token');
+            // chunk title
+            var chunkTitle = 'twitch'
+                +' - '+data.info.channel.name
+                +' - '+chunkStartStr
+                +' - '+data.titleClean
+                +' - '+data.info.broadcast_id;
 
-            // next step
-            getVideoInfo();
-         },
-      });
-   }
-   /**/
+            // chunk links of available qualities
+            var linksHtml = '';
+            for(var qualityId=0; qualityId<data.qualities.length; ++qualityId) {
 
+                var quality = data.qualities[qualityId];
 
-   //************************************************* get video info and chunks
-   function getVideoInfo() {
-
-      // update status
-      box.set('fetching video info/chunks');
-
-      // store urls
-      data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;//+'&oauth_token='+data.token;
-      data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId;//+'&oauth_token='+data.token;
-
-
-      // triage: new vod, playlist | old vod
-      var nextStep = data.type == 'v' ? getAccessToken : buildList;
-
-
-      // get video info
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : data.infoUrl,
-         onload : function(xhr){
-
-            // store
-            data.info = xhr.responseText
-               ? JSON.parse(xhr.responseText)
-               : false;
-
-
-            // archive start as timestamp and string
-            data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
-            data.startStr = timeFormat(data.start);
-
-            // archive duration as timestamp and string
-            data.duration    = data.info.length;
-            data.durationStr = durationFormat(data.duration);
-
-            // archive title as raw and windows filename safe
-            data.title       = data.info.title;
-            data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
-
-
-            // next step
-            nextStep();
-         },
-      });
-
-
-      // get video chunks
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : data.chunkUrl,
-         onload : function(xhr){
-
-            // store
-            data.chunks = xhr.responseText
-               ? JSON.parse(xhr.responseText)
-               : false;
-            data.chunks = data.chunks && data.chunks.chunks
-               ? data.chunks.chunks
-               : false;
-
-            // next step
-            nextStep();
-         },
-      });
-   }
-
-
-   //********************************************************** build links list
-   function buildList() {
-
-      // need both info and chunks to be available
-      if(!data.info || !data.chunks) {
-         return;
-      }
-
-
-      // update status
-      box.set('building list');
-
-
-      // available archive qualities
-      data.qualities = [];
-      for(var quality in data.chunks) {
-         data.qualities.push(quality);
-      }
-
-      // base quality reference
-      data.qualityRef = data.qualities[0];
-
-      // archive chunks count
-      data.chunksCount = data.chunks[data.qualityRef].length;
-
-      // init output buffer
-      var html = '';
-
-      // init start time offset
-      var startOffset = 0;
-
-      // build list
-      for(var chunkId=0; chunkId<data.chunksCount; ++chunkId) {
-
-         // chunk start time as timestamp and string
-         var chunkStart    = data.start + startOffset;
-         var chunkStartStr = timeFormat(chunkStart);
-
-         // chunk duration as timestamp and string
-         var chunkDuration    = data.chunks[data.qualityRef][chunkId].length;
-         var chunkDurationStr = durationFormat(chunkDuration);
-
-         // is chunk audio muted ?
-         var chunkMuted = data.chunks[data.qualityRef][chunkId].upkeep == 'fail'
-            ? true
-            : false;
-
-         // count muted chunks
-         if(chunkMuted) {
-            ++data.chunksMutedCount;
-         }
-
-         // chunk title
-         var chunkTitle = 'twitch'
-            +' - '+data.info.channel.name
-            +' - '+chunkStartStr
-            +' - '+data.titleClean
-            +' - '+data.info.broadcast_id;
-
-         // chunk links of available qualities
-         var linksHtml = '';
-         for(var qualityId=0; qualityId<data.qualities.length; ++qualityId) {
-
-            var quality = data.qualities[qualityId];
-
-            linksHtml += ''
-               +'<div><a href="'+data.chunks[quality][chunkId].url+'">'
-                  +'<span class="extra">'+chunkTitle+' - </span>'+quality
-               +'</a></div>';
-         }
-
-         // finalize chunk presentation
-         html += ''
-         +'<div class="archive" title="'+chunkTitle+'">'
-            +'<div>'+(parseInt(chunkId)+1)+'</div>'
-            +'<div>'+chunkStartStr+'</div>'
-            +'<div>'+chunkDurationStr+'</div>'
-            +'<div>'+(chunkMuted ? '<span class="muted">muted</span>' : '')+'</div>'
-            +linksHtml
-         +'</div>';
-
-         // increment start time offset
-         startOffset += data.chunks[data.qualityRef][chunkId].length;
-      }
-
-
-      //*********************************************************** display html
-      box.set(''
-         +'<div class="header">'
-            +'<div>A<br/>'+data.chunksCount+'</div>'
-            +'<div>start<br/><a href="'+data.chunkUrl+'">cfg</a></div>'
-            +'<div>duration<br/>'+data.durationStr+'</div>'
-            +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunksCount+'</div>'
-         +'</div>'
-         +html
-      );
-   }
-
-
-
-
-   /****************************************************************************
-   *****************************************************************************
-   *****************************************************************************
-   ************************************************** alt: playlist vod (/v/) */
-
-
-
-
-   //********************************************************** get access token
-   function getAccessToken() {
-
-      // need both info and chunks to be available
-      if(!data.info || !data.chunks) {
-         return;
-      }
-
-
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : 'https://api.twitch.tv/api/vods/'+data.vodId+'/access_token?oauth_token=' + data.token,
-         onload : function(xhr){
-
-            var d = JSON.parse(xhr.responseText);
-            data.accessToken = d.token;
-            data.sig         = d.sig;
-
-            if(!data.accessToken || !data.sig) {
-               return;
+                linksHtml += ''
+                    +'<div><a href="'+data.chunks[quality][chunkId].url+'">'
+                       +'<span class="extra">'+chunkTitle+' - </span>'+quality
+                    +'</a></div>';
             }
 
-            // next step
-            getVodInfo();
-         },
-      });
-   }
+            // finalize chunk presentation
+            html += ''
+            +'<div class="archive" title="'+chunkTitle+'">'
+                +'<div>'+(parseInt(chunkId)+1)+'</div>'
+                +'<div>'+chunkStartStr+'</div>'
+                +'<div>'+chunkDurationStr+'</div>'
+                +'<div>'+(chunkMuted ? '<span class="muted">muted</span>' : '')+'</div>'
+                +linksHtml
+            +'</div>';
+
+            // increment start time offset
+            startOffset += data.chunks[data.qualityRef][chunkId].length;
+        }
 
 
-   //************************************************* get video info and chunks
-   function getVodInfo() {
+        //********************************************************* display html
+        box.set(''
+            +'<div class="header">'
+                +'<div>A<br/>'+data.chunksCount+'</div>'
+                +'<div>start<br/><a href="'+data.chunkUrl+'">cfg</a></div>'
+                +'<div>duration<br/>'+data.durationStr+'</div>'
+                +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunksCount+'</div>'
+            +'</div>'
+            +html
+        );
+    }
 
-      data.vodUrl = 'http://usher.twitch.tv/vod/'+data.vodId
-         +'?nauthsig='+data.sig
-         +'&nauth='+encodeURIComponent(data.accessToken);
 
-      GM_xmlhttpRequest({
-         method : 'GET',
-         url    : data.vodUrl,
-         onload : vodMasterPlaylistLinks,
-      });
-   }
+
+
+    /***************************************************************************
+    ****************************************************************************
+    ****************************************************************************
+    ************************************************* alt: playlist vod (/v/) */
+
+
+
+
+    //********************************************************* get access token
+    function getAccessToken() {
+
+        // need both info and chunks to be available
+        if(!data.info || !data.chunks) {
+            return;
+        }
+
+        GM_xmlhttpRequest({
+            method : 'GET',
+            url    : 'https://api.twitch.tv/api/vods/'+data.vodId+'/access_token?oauth_token=' + data.token,
+            onload : function(xhr){
+
+                var d = JSON.parse(xhr.responseText);
+                data.accessToken = d.token;
+                data.sig         = d.sig;
+
+                if(!data.accessToken || !data.sig) {
+                    return;
+                }
+
+                // next step
+                getVodInfo();
+            },
+        });
+    }
+
+
+
+
+    //************************************************ get video info and chunks
+    function getVodInfo() {
+
+        data.vodUrl = 'http://usher.twitch.tv/vod/'+data.vodId
+            +'?nauthsig='+data.sig
+            +'&nauth='+encodeURIComponent(data.accessToken);
+
+        GM_xmlhttpRequest({
+            method : 'GET',
+            url    : data.vodUrl,
+            onload : vodMasterPlaylistLinks,
+        });
+    }
 
 
 
