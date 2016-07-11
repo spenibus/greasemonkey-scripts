@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160711-2140
+// @version     20160711-2148
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -423,11 +423,20 @@ function live() {
         if(content.stream == null) {
             vars.isLive = 2;
             livePresent('no stream');
+
+            // check for live again in a moment
+            window.setTimeout(live, 30000);
+
             return;
         }
 
         // channel is live
         vars.isLive  = 1;
+
+        // check for live again in a moment (offline detection really)
+        window.setTimeout(live, 60000);
+
+        // some stats
         vars.viewers = content.stream ? content.stream.viewers : 0;
 
         // get token
