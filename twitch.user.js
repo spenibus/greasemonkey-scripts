@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160712-2147
+// @version     20160712-2149
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -1129,7 +1129,7 @@ function archives() {
 
             html += ''
                 +'<a title="'+fileTitle1+paddedCount+fileTitle2+'" href="'
-                    +list[i]+'?start_offset=0&end_offset=99999999">'
+                    +list[i]+'?start_offset=0&end_offset=9999999">'
                     +'<span class="extra">'+fileTitle1+'</span>'
                     +paddedCount
                     +'<span class="extra">'+fileTitle2+'</span>'
