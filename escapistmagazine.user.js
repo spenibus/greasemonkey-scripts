@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://escapistmagazine.com/*
 // @include     http*://*.escapistmagazine.com/*
-// @version     20151208-0022
+// @version     20160904-2013
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
