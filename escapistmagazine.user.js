@@ -86,7 +86,7 @@ if(loc.pathname.substr(0,13) == '/videos/view/') {
                 +'<div>'
                     +'<div>'+i.res+'</div>'
                     +'<div>'+i.type+'</div>'
-                    +'<div><a href="'+i.src+'">TheEscapist-'+timeStr+' - '+title+'</a></div>'
+                    +'<div><a href="'+i.src+'">TheEscapist-'+timeStr+' - '+title+' - '+i.res+' - '+i.type+'</a></div>'
                 +'</div>'
         }
 
