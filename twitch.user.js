@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160916-0207
+// @version     20160916-2349
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -416,7 +416,7 @@ function live() {
     function liveHandler(xhr) {
 
         var content = JSON.parse(xhr.responseText);
-console.log(content);
+
         // not a user, abort
         if(content.status == 404 || content.status == 422) {
             vars.isLive = 2;
