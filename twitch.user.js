@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160712-2149
+// @version     20160916-0207
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -22,6 +22,8 @@ var loc = document.location;
 /********************************************************************* config */
 var cfg = {
     currentUrl : null,
+    // web player client id
+    clientId   : 'jzkbprff40iqj646a697cyrvl0zt2m6',
 };
 
 
@@ -397,9 +399,12 @@ function live() {
     (function(){
 
         GM_xmlhttpRequest({
-            url    : 'https://api.twitch.tv/kraken/streams/'+vars.channel,
-            method : 'GET',
-            onload : liveHandler,
+            url     : 'https://api.twitch.tv/kraken/streams/'+vars.channel,
+            method  : 'GET',
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : liveHandler,
         });
 
         //box.set('checking live status');
@@ -411,7 +416,7 @@ function live() {
     function liveHandler(xhr) {
 
         var content = JSON.parse(xhr.responseText);
-
+console.log(content);
         // not a user, abort
         if(content.status == 404 || content.status == 422) {
             vars.isLive = 2;
@@ -441,9 +446,12 @@ function live() {
 
         // get token
         GM_xmlhttpRequest({
-            url    : 'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token',
-            method : 'GET',
-            onload : tokenHandler,
+            url     : 'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token',
+            method  : 'GET',
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : tokenHandler,
         });
 
         //box.set('fetching token');
@@ -474,9 +482,12 @@ function live() {
 
         // get playlist
         GM_xmlhttpRequest({
-            url    : vars.playlistUrl,
-            method : 'GET',
-            onload : playlistHandler,
+            url     : vars.playlistUrl,
+            method  : 'GET',
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : playlistHandler,
         });
 
         //box.set('fetching playlist');
@@ -793,9 +804,12 @@ function archives() {
 
         // get video info
         GM_xmlhttpRequest({
-            method : 'GET',
-            url    : data.infoUrl,
-            onload : function(xhr){
+            method  : 'GET',
+            url     : data.infoUrl,
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : function(xhr){
 
                 // store
                 data.info = xhr.responseText
@@ -822,9 +836,12 @@ function archives() {
 
         // get video chunks
         GM_xmlhttpRequest({
-            method : 'GET',
-            url    : data.chunkUrl,
-            onload : function(xhr){
+            method  : 'GET',
+            url     : data.chunkUrl,
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : function(xhr){
 
                 // store
                 data.chunks = xhr.responseText
@@ -959,9 +976,12 @@ function archives() {
         }
 
         GM_xmlhttpRequest({
-            method : 'GET',
-            url    : 'https://api.twitch.tv/api/vods/'+data.vodId+'/access_token?oauth_token=' + data.token,
-            onload : function(xhr){
+            method  : 'GET',
+            url     : 'https://api.twitch.tv/api/vods/'+data.vodId+'/access_token?oauth_token=' + data.token,
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : function(xhr){
 
                 var d = JSON.parse(xhr.responseText);
                 data.accessToken = d.token;
@@ -988,9 +1008,12 @@ function archives() {
             +'&nauth='+encodeURIComponent(data.accessToken);
 
         GM_xmlhttpRequest({
-            method : 'GET',
-            url    : data.vodUrl,
-            onload : vodMasterPlaylistLinks,
+            method  : 'GET',
+            url     : data.vodUrl,
+            headers : {
+                'Client-ID' : cfg.clientId
+            },
+            onload  : vodMasterPlaylistLinks,
         });
     }
 
@@ -1047,6 +1070,9 @@ function archives() {
             GM_xmlhttpRequest({
                 method  : 'GET',
                 url     : item.url,
+                headers : {
+                    'Client-ID' : cfg.clientId
+                },
                 context : item,
                 onload  : vodPlaylistLinks,
             });
