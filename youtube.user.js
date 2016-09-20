@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20160920-2049
+// @version     20160920-2050
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -164,7 +164,7 @@ function videoLinks() {
             ? new Date(tmp.date * 1000)
             : false;
 
-        tmp.formatted = tmp.date ? SGL.timeFormatUTC('Ymd-His')+'-UTC' : '';
+        tmp.formatted = tmp.date ? SGL.timeFormatUTC('Ymd-His', tmp.date)+'-UTC' : '';
 
         /**
         tmp.formatted = tmp.date
