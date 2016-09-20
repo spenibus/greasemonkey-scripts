@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://escapistmagazine.com/*
 // @include     http*://*.escapistmagazine.com/*
-// @version     20160904-2013
+// @version     20160920-2036
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // ==/UserScript==
@@ -65,7 +65,7 @@ if(loc.pathname.substr(0,13) == '/videos/view/') {
 
         if(timeSrc) {
             //var timeStr = SGL.timeFormat('Y-m-d H:i:s O', Date.parse(timeSrc));
-            var timeStr = SGL.timeFormatUTC('Y-m-d H:i:s', Date.parse(timeSrc.textContent))+' GMT';
+            var timeStr = SGL.timeFormatUTC('Ymd-His', Date.parse(timeSrc.textContent))+' UTC';
         }
 
 
