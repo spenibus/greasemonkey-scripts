@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160919-0247
+// @version     20160920-2057
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -819,7 +819,7 @@ function archives() {
 
                      // archive start as timestamp and string
                      data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
-                     data.startStr = timeFormat(data.start);
+                     data.startStr = SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC';
 
                      // archive duration as timestamp and string
                      data.duration    = data.info.length;
@@ -895,7 +895,7 @@ function archives() {
 
             // chunk start time as timestamp and string
             var chunkStart    = data.start + startOffset;
-            var chunkStartStr = timeFormat(chunkStart);
+            var chunkStartStr = SGL.timeFormatUTC('Ymd-His', chunkStart*1000)+'-UTC';
 
             // chunk duration as timestamp and string
             var chunkDuration    = data.chunks[data.qualityRef][chunkId].length;
@@ -1144,7 +1144,7 @@ function archives() {
 
             var fileTitle1 = 'twitch'
                 +' - '+data.info.channel.name
-                +' - '+timeFormat(data.start)
+                +' - '+SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC'
                 +' - ';
 
             var fileTitle2 = '-'+('000000'+countMax).substr(countMaxLength)
