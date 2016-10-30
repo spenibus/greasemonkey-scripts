@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20160920-2057
+// @version     20161030-1720
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -702,6 +702,12 @@ function archives() {
         +'}'
         +'#spenibusVideoLinkBox > div.vod  .list > :nth-child(2n) {'
             +'background-color:rgba(0,0,0,0.25)'
+        +'}'
+        +'#spenibusVideoLinkBox > .header > .status {'
+            +'background-color:rgba(128,128,128,0.5)'
+        +'}'
+        +'#spenibusVideoLinkBox > .header > .status.ready {'
+            +'background-color:rgba(0,128,0,0.5)'
         +'}';
 
 
@@ -1032,13 +1038,21 @@ function archives() {
         //********************************************************* display html
         box.set(''
             +'<div class="header">'
-                +'<div>A</div>'
+                +'<div class="status">A</div>'
                 +'<div>bitrate</div>'
                 +'<div>duration<br/>'+data.durationStr+'</div>'
                 +'<div>size<br/>(estimated)</div>'
                 +'<div>files</div>'
             +'</div>'
         );
+
+
+        // number of archive items and init processed count
+        cfg.archiveItemCount          = items.length;
+        cfg.archiveItemProcessedCount = 0;
+
+        // store ref to status element
+        cfg.archiveStatusElement = document.querySelector('#spenibusVideoLinkBox > .header > .status');
 
 
         //********************************************************* build output
@@ -1166,6 +1180,14 @@ function archives() {
 
         nodeList.innerHTML  = html;
         nodeCount.innerHTML = 'in '+countMax;
+
+        // count how many archive items have been processed
+        cfg.archiveItemProcessedCount++;
+
+        // all archive items have been processed
+        if(cfg.archiveItemCount == cfg.archiveItemProcessedCount) {
+            cfg.archiveStatusElement.classList.add('ready');
+        }
     }
 }
 window.addEventListener('DOMContentLoaded', archives, false);
