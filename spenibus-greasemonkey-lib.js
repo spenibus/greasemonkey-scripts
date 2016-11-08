@@ -7,7 +7,7 @@ spenibus_greasemonkey_lib = {
 
 
    // lib version
-   version : 20161108.2125,
+   version : 20161108.2153,
 
 
 
@@ -187,6 +187,30 @@ spenibus_greasemonkey_lib = {
 
       return timeStr;
    },
+
+
+
+
+    /******************************************************************************/
+    onReady : function(func) {
+        var f = function() {
+            window.removeEventListener('DOMContentLoaded', f);
+            func.apply(this, arguments);
+        }
+        window.addEventListener('DOMContentLoaded', f, false);
+    },
+
+
+
+
+    /******************************************************************************/
+    onLoaded : function(func) {
+        var f = function() {
+            window.removeEventListener('load', f);
+            func.apply(this, arguments);
+        }
+        window.addEventListener('load', f, false);
+    },
 };
 
 
@@ -197,15 +221,3 @@ unsafeWindow.history.pushState = exportFunction(function() {
    dispatchEvent(new Event('pushState'));
    return history.pushState.apply(history, arguments);
 }, unsafeWindow)
-
-
-
-
-/******************************************************************************/
-function onReady(func) {
-    var f = function() {
-        window.removeEventListener('DOMContentLoaded', f);
-        func.apply(this, arguments);
-    }
-    window.addEventListener('DOMContentLoaded', f, false);
-}
