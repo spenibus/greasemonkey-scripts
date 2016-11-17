@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20161111-1334
+// @version     20161117-2238
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -106,27 +106,29 @@ function videoLinks() {
         var content = assets.responseText;
 
 
-        // get original decoder function name
-        var funcName = content.match(
-           /e\.sig\|\|(\w+)\(/
-        )[1];
+        // get function name
+        var re = /\w+\.sig\|\|(\w+)\(/;
+        var funcName = re.exec(content)[1];
+
 
         // get function body
-        var re = new RegExp(funcName+'=(function[\\s\\S]*?)\\n');
-
+        var re = new RegExp('[\\s;]'+funcName+'=(function[\\s\\S]*?)\\n');
         var funcStr = re.exec(content)[1];
 
+
         // get object used in function
-        var subObj = funcStr.match(
-           /;(\w+)\.\w+\(/
-        )[1];
+        var re = /;([$|\w]+)\.[$|\w]+\(/;
+        var subObj = re.exec(funcStr)[1];
 
-        var re = new RegExp('('+subObj+'={[\\s\\S]*?};)');
 
+        // get object body
+        var re = new RegExp('('+subObj.replace('$','\\$')+'={[\\s\\S]*?};)');
         var subObjStr = re.exec(content)[1];
+
 
         // just eval the stuff, what's the worst that could happen, eh
         eval('var f = ' + funcStr + subObjStr);
+
 
         return f;
     })();
