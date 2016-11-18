@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20161117-2238
+// @version     20161117-2013
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -93,7 +93,7 @@ function videoLinks() {
     //******************************************************** signature decoder
     // https://www.quora.com/How-can-I-make-a-YouTube-video-downloader-web-application-from-scratch
     // https://github.com/rg3/youtube-dl/blob/9dd8e46a2d0860421b4bb4f616f05e5ebd686380/youtube_dl/extractor/youtube.py#L625
-    var sigDecode = (function(){
+    var sigDecode = function() {
 
         // get assets source
         var assets = GM_xmlhttpRequest({
@@ -107,31 +107,30 @@ function videoLinks() {
 
 
         // get function name
-        var re = /\w+\.sig\|\|(\w+)\(/;
+        var re = /[\$\w]+\.sig\|\|([\$\w]+)\(/i;
         var funcName = re.exec(content)[1];
 
 
         // get function body
-        var re = new RegExp('[\\s;]'+funcName+'=(function[\\s\\S]*?)\\n');
+        var re = new RegExp('[\\s;]'+funcName.replace('$','\\$')+'=(function[\\s\\S]*?)\\n', 'i');
         var funcStr = re.exec(content)[1];
 
 
         // get object used in function
-        var re = /;([$|\w]+)\.[$|\w]+\(/;
+        var re = /;([\$\w]+)\.[\$\w]+\(/i;
         var subObj = re.exec(funcStr)[1];
 
 
         // get object body
-        var re = new RegExp('('+subObj.replace('$','\\$')+'={[\\s\\S]*?};)');
+        var re = new RegExp('('+subObj.replace('$','\\$')+'={[\\s\\S]*?};)', 'i');
         var subObjStr = re.exec(content)[1];
 
 
         // just eval the stuff, what's the worst that could happen, eh
         eval('var f = ' + funcStr + subObjStr);
 
-
-        return f;
-    })();
+        return f.apply(this, arguments);
+    }
 
 
     //********************************************************* prepare dash url
@@ -338,8 +337,8 @@ function videoLinks() {
                 item.url  = unescape(data.url);
 
                 // add signature, obsolete ?
-                item.url += data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
-                item.url += data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
+                item.url += data && data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
+                item.url += data && data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
 
                 // add to main object
                 obj.data[item.itag] = item;
