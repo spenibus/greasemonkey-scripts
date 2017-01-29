@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20161030-1720
+// @version     20170129-2050
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -57,10 +57,56 @@ unsafeWindow.history.replaceState = exportFunction(function() {
 
 
 
+/*******************************************************************************
+get url content
+if handler function is missing, sync mode is enabled
+*******************************************************************************/
+function getUrl(url, handler=null) {
+
+    // no handler supplied, use sync mode
+    var syncMode = (handler == null) ? true : false;
+
+    var params = {
+        url      : url
+        ,method  : 'GET'
+        ,headers : {
+            'Client-ID' : cfg.clientId
+        }
+        ,onload  : handler
+    }
+
+    if(syncMode) {
+        params.synchronous = true;
+    }
+
+    var xhr = GM_xmlhttpRequest(params);
+
+    if(syncMode) {
+        return xhr.responseText;
+    }
+}
+
+
+
+
 /*********************************************************** get channel name */
 function getChannel() {
-    var m = loc.pathname.match(/^\/([^\/]+)/);
-    return m ? m[1].toLowerCase() : null;
+
+    var m;
+    var n;
+
+    // page is archive video
+    if( m = loc.pathname.match(/^\/videos\/(\d+)/) ) {
+        var str = getUrl('https://api.twitch.tv/kraken/videos/v'+m[1]);
+        n = (str) ? JSON.parse(str).channel.name : null;
+    }
+    // default method, parse url
+    else {
+        m = loc.pathname.match(/^\/([^\/]+)/);
+        n = m ? m[1].toLowerCase() : null;
+    }
+
+    return n;
 }
 
 
@@ -398,14 +444,10 @@ function live() {
     //************************************ start chain reaction: get live status
     (function(){
 
-        GM_xmlhttpRequest({
-            url     : 'https://api.twitch.tv/kraken/streams/'+vars.channel,
-            method  : 'GET',
-            headers : {
-                'Client-ID' : cfg.clientId
-            },
-            onload  : liveHandler,
-        });
+        getUrl(
+            'https://api.twitch.tv/kraken/streams/'+vars.channel
+            ,liveHandler
+        );
 
         //box.set('checking live status');
         livePresent('checking live status');
@@ -445,14 +487,10 @@ function live() {
         vars.viewers = content.stream ? content.stream.viewers : 0;
 
         // get token
-        GM_xmlhttpRequest({
-            url     : 'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token',
-            method  : 'GET',
-            headers : {
-                'Client-ID' : cfg.clientId
-            },
-            onload  : tokenHandler,
-        });
+        getUrl(
+            'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token'
+            ,tokenHandler
+        );
 
         //box.set('fetching token');
         livePresent('fetching token');
@@ -481,14 +519,10 @@ function live() {
             +'&token='+escape(vars.token);
 
         // get playlist
-        GM_xmlhttpRequest({
-            url     : vars.playlistUrl,
-            method  : 'GET',
-            headers : {
-                'Client-ID' : cfg.clientId
-            },
-            onload  : playlistHandler,
-        });
+        getUrl(
+            vars.playlistUrl
+            ,playlistHandler
+        );
 
         //box.set('fetching playlist');
         livePresent('fetching playlist');
@@ -730,7 +764,7 @@ function archives() {
     (function(){
 
         var path = loc.pathname;
-        var regexUrl = /\/([bcv])\/(\d+)/i;
+        var regexUrl = /\/(videos)\/(\d+)/i;
 
         // get archive id+type
         var m    = path.match(regexUrl);
@@ -754,9 +788,10 @@ function archives() {
 
         // store archive id
         data.archiveId = {
-            'b':'a',
-            'v':'v',
-            'c':'c'
+            'b'       : 'a'
+            ,'v'      : 'v'
+            ,'c'      : 'c'
+            ,'videos' : 'v'
         }[data.type] + data.vodId;
 
         box.set('init archives');
@@ -769,29 +804,6 @@ function archives() {
     })();
 
 
-    //**************************************************************** get token
-    /**
-    function getToken() {
-
-        GM_xmlhttpRequest({
-            method : 'GET',
-            url    : 'https://api.twitch.tv/api/viewer/token.json',
-            onload : function(xhr){
-
-                data.token = JSON.parse(xhr.responseText)['token'];
-
-                if(!data.token) {
-                   return;
-                }
-
-                box.set('got token');
-
-                // next step
-                getVideoInfo();
-            },
-        });
-    }
-    /**/
 
 
     //************************************************ get video info and chunks
@@ -801,67 +813,65 @@ function archives() {
         box.set('fetching video info/chunks');
 
         // store urls
-        data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;//+'&oauth_token='+data.token;
-        data.chunkUrl = 'https://api.twitch.tv/api/videos/'   +data.archiveId;//+'&oauth_token='+data.token;
+        data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;
+        data.chunkUrl = 'https://api.twitch.tv/api/videos/'+data.archiveId;
 
 
         // triage: new vod, playlist | old vod
-        var nextStep = data.type == 'v' ? getAccessToken : buildList;
+        var nextStep = data.type == 'videos' ? getAccessToken : buildList;
 
 
         // get video info
-        GM_xmlhttpRequest({
-            method  : 'GET',
-            url     : data.infoUrl,
-            headers : {
-                'Client-ID' : cfg.clientId
-            },
-            onload  : function(xhr){
-
-                // store
-                data.info = xhr.responseText
-                    ? JSON.parse(xhr.responseText)
-                    : false;
-
-                     // archive start as timestamp and string
-                     data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
-                     data.startStr = SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC';
-
-                     // archive duration as timestamp and string
-                     data.duration    = data.info.length;
-                     data.durationStr = durationFormat(data.duration);
-
-                     // archive title as raw and windows filename safe
-                     data.title       = data.info.title;
-                     data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
-
-                     // next step
-                     nextStep();
-            },
-        });
+        getUrl(
+            data.infoUrl
+            ,infoHandler
+        );
 
 
         // get video chunks
-        GM_xmlhttpRequest({
-            method  : 'GET',
-            url     : data.chunkUrl,
-            headers : {
-                'Client-ID' : cfg.clientId
-            },
-            onload  : function(xhr){
+        getUrl(
+            data.chunkUrl
+            ,chunkHandler
+        );
 
-                // store
-                data.chunks = xhr.responseText
-                    ? JSON.parse(xhr.responseText)
-                    : false;
-                data.chunks = data.chunks && data.chunks.chunks
-                    ? data.chunks.chunks
-                    : false;
 
-                // next step
-                nextStep();
-            },
-        });
+        function infoHandler(xhr) {
+
+            // store
+            data.info = xhr.responseText
+                ? JSON.parse(xhr.responseText)
+                : false;
+
+            // archive start as timestamp and string
+            data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
+            data.startStr = SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC';
+
+            // archive duration as timestamp and string
+            data.duration    = data.info.length;
+            data.durationStr = durationFormat(data.duration);
+
+            // archive title as raw and windows filename safe
+            data.title       = data.info.title;
+            data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
+
+            // next step
+            nextStep();
+        }
+
+
+        function chunkHandler(xhr){
+
+            // store
+            data.chunks = xhr.responseText
+                ? JSON.parse(xhr.responseText)
+                : false;
+            data.chunks = data.chunks && data.chunks.chunks
+                ? data.chunks.chunks
+                : false;
+
+            // next step
+            nextStep();
+        }
     }
 
 
