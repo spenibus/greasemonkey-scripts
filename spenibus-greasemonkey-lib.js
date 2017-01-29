@@ -7,7 +7,7 @@ spenibus_greasemonkey_lib = {
 
 
    // lib version
-   version : 20161108.2153,
+   version : 20170129.2059,
 
 
 
@@ -74,6 +74,9 @@ spenibus_greasemonkey_lib = {
                +'padding:1px;'
                +'min-width:8px;'
                +'min-height:8px;'
+               +'max-width:90vw;'
+               +'max-height:90vh;'
+               +'overflow:auto;'
             +'}'
             // pad on hover
             +'#'+containerId+':hover {'
