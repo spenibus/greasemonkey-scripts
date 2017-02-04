@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20161212-2204
+// @version     20170204-2301
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -93,28 +93,40 @@ function videoLinks() {
     //******************************************************** signature decoder
     // https://www.quora.com/How-can-I-make-a-YouTube-video-downloader-web-application-from-scratch
     // https://github.com/rg3/youtube-dl/blob/9dd8e46a2d0860421b4bb4f616f05e5ebd686380/youtube_dl/extractor/youtube.py#L625
-    var sigDecode;
-    (function() {
 
+    // default
+    var sigDecode = function(){ return 'nosig'; };
+
+    // get the real function, also trying IIFE without parentheses
+    !function() {
         // get assets source
-        var assets = GM_xmlhttpRequest({
+        var content = GM_xmlhttpRequest({
             method:      "GET",
             url:         unsafeWindow.ytplayer.config.assets.js,
             synchronous: true,
-        });
-
-        var content = assets.responseText;
+        }).responseText;
 
         // move vars declaration outside IIFE so we can access them
-        var varsDeclaration = content.match(/{var window=this;(var [\s\S]*?;)/)[1];
+        var m = content.match(/{var window=this;(var [\s\S]*?;)/)
+        if(!m){
+            return;
+        }
+        var varsDeclaration = m[1];
         content = varsDeclaration + content.replace(varsDeclaration, '');
 
         // eval the code to access the vars in this scope
         eval(content);
 
         // get decipher function name
-        var re = /[\$\w]+\.sig\|\|([\$\w]+)\(/i;
-        var funcName = re.exec(content)[1];
+        //var re = /[\$\w]+\.sig\|\|([\$\w]+)\(/i;
+        var re = /\.set\("signature",([\$\w]+)\(/i;
+
+        //set("signature",Gm(
+        var m = re.exec(content);
+        if(!m){
+            return;
+        }
+        var funcName = m[1];
 
         // bind function to a usable local name
         eval('var f = ' + funcName);
@@ -123,7 +135,7 @@ function videoLinks() {
         sigDecode = function(){
             return f.apply(this, arguments);
         }
-    })();
+    }();
 
 
     //********************************************************* prepare dash url
