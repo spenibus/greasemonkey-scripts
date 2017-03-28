@@ -3,12 +3,18 @@ spenibus greasemonkey lib
 *******************************************************************************/
 
 
+
+
 spenibus_greasemonkey_lib = {
+
+
 
 
     /***************************************************************************
     general config
     ***************************************************************************/
+
+
 
 
     // lib version
@@ -26,6 +32,8 @@ spenibus_greasemonkey_lib = {
     ***************************************************************************/
 
 
+
+
     /***
     console log shorthand
     ***/
@@ -40,7 +48,7 @@ spenibus_greasemonkey_lib = {
     print object
     ***/
     print_r : function(obj, ret) {
-        var str = JSON.stringify(obj, null, 3)
+        let str = JSON.stringify(obj, null, 3)
 
         // return
         if(ret) {
@@ -63,7 +71,7 @@ spenibus_greasemonkey_lib = {
     add css to current document
     ***/
     css : function(str) {
-        var node = document.createElement('style');
+        let node = document.createElement('style');
         node.setAttribute('type', 'text/css');
         node.textContent = str;
         document.head.appendChild(node);
@@ -78,7 +86,7 @@ spenibus_greasemonkey_lib = {
     displayBox : function(boxId) {
 
         // get container
-        var container = document.getElementById(this.cfg.displayBoxContainerId);
+        let container = document.getElementById(this.cfg.displayBoxContainerId);
 
         // container is missing
         if(!container) {
@@ -127,7 +135,7 @@ spenibus_greasemonkey_lib = {
         }
 
         // init output object
-        var content = {};
+        let content = {};
 
         // get box element
         content.node = document.getElementById(boxId);
@@ -142,11 +150,19 @@ spenibus_greasemonkey_lib = {
         // method: set content to box
         content.set = function(str) {
             content.node.innerHTML = str;
+            return content;
         }
 
         // method: append content to box
         content.append = function(str) {
             content.node.innerHTML += str;
+            return content;
+        }
+
+        // method: set inline style of box
+        content.setStyle = function(str) {
+            content.node.setAttribute('style', str);
+            return content;
         }
 
         // return object
@@ -179,12 +195,53 @@ spenibus_greasemonkey_lib = {
             ');
         }
 
-        // create box
-        var box = document.createElement('div');
-        box.id = boxId;
-        box.classList.add(this.cfg.genericBoxClass, boxClass);
+        // init output object
+        let content = {};
 
-        return box;
+        // create box element
+        content.node = document.createElement('div');
+        content.node.id = boxId;
+        content.node.classList.add(this.cfg.genericBoxClass, boxClass);
+
+        // method: set content to box
+        content.set = function(str) {
+            content.node.innerHTML = str;
+            return content;
+        }
+
+        // method: append content to box
+        content.append = function(str) {
+            content.node.innerHTML += str;
+            return content;
+        }
+
+        // method: set inline style of box
+        content.setStyle = function(str) {
+            content.node.setAttribute('style', str);
+            return content;
+        }
+
+        // method: append box to element
+        content.appendTo = function(elem) {
+            elem.appendChild(content.node);
+            return content;
+        }
+
+        // method: write box to element
+        content.writeTo = function(elem) {
+
+            // clear content
+            while(elem.firstChild){
+                elem.removeChild(elem.firstChild);
+            }
+
+            elem.appendChild(content.node);
+            return content;
+        }
+
+
+        // return object
+        return content;
     },
 
 
@@ -193,6 +250,8 @@ spenibus_greasemonkey_lib = {
     /***************************************************************************
     time
     ***************************************************************************/
+
+
 
 
     /***
@@ -208,10 +267,10 @@ spenibus_greasemonkey_lib = {
     timeFormat : function(str, timestamp) {
 
         // create date from timestamp
-        var time = new Date(timestamp);
+        let time = new Date(timestamp);
 
         // prepare formatted time string
-        var timeStr = str;
+        let timeStr = str;
 
         // replace placeholders in string
         timeStr = timeStr.replace('Y', time.getFullYear());
@@ -223,10 +282,10 @@ spenibus_greasemonkey_lib = {
 
         // timezone is a little more annoying to replace
         timeStr = timeStr.replace('O', function(){
-            var tz  = time.getTimezoneOffset();
-            var tzh = Math.floor(Math.abs(tz)/60);
-            var tzm = tz%60;
-            var tzs = tz/Math.abs(tz);
+            let tz  = time.getTimezoneOffset();
+            let tzh = Math.floor(Math.abs(tz)/60);
+            let tzm = tz%60;
+            let tzs = tz/Math.abs(tz);
             return (tzs < 0 ? '-' : '+')
                 +('0'+tzh).slice(-2)
                 +('0'+tzm).slice(-2);
@@ -251,10 +310,10 @@ spenibus_greasemonkey_lib = {
     timeFormatUTC : function(str, timestamp) {
 
         // create date from timestamp
-        var time = new Date(timestamp);
+        let time = new Date(timestamp);
 
         // prepare formatted time string
-        var timeStr = str;
+        let timeStr = str;
 
         // replace placeholders in string
         timeStr = timeStr.replace('Y', time.getUTCFullYear());
@@ -276,11 +335,48 @@ spenibus_greasemonkey_lib = {
     ***************************************************************************/
 
 
+
+
+    /***
+    run callback function on one or more events, once or forever
+        eventList : array
+        callback  : function
+        singleUse : bool
+    ***/
+    onEvent: function(eventList, callback, singleUse=true) {
+        eventList.forEach(function(eventName){
+            let f = function() {
+                if(singleUse) {
+                    window.removeEventListener(eventName, f);
+                }
+                callback.apply(this, arguments);
+            }
+            window.addEventListener(eventName, f, true);
+        });
+    },
+
+
+
+
+    /***
+    run function before document js runs
+    ***/
+    onBeforeScriptExecute : function(func) {
+        let f = function() {
+            window.removeEventListener('beforescriptexecute', f);
+            func.apply(this, arguments);
+        }
+        window.addEventListener('beforescriptexecute', f, true);
+    },
+
+
+
+
     /***
     run function when window triggers "DOMContentLoaded"
     ***/
     onReady : function(func) {
-        var f = function() {
+        let f = function() {
             window.removeEventListener('DOMContentLoaded', f);
             func.apply(this, arguments);
         }
@@ -294,11 +390,37 @@ spenibus_greasemonkey_lib = {
     run function when window triggers "load"
     ***/
     onLoaded : function(func) {
-        var f = function() {
+        let f = function() {
             window.removeEventListener('load', f);
             func.apply(this, arguments);
         }
         window.addEventListener('load', f, false);
+    },
+
+
+
+
+    /***
+    run function when window triggers "pushState"
+    ***/
+    onPushState : function(func) {
+        let f = function() {
+            window.removeEventListener('pushState', f);
+            func.apply(this, arguments);
+        }
+        window.addEventListener('pushState', f, false);
+    },
+
+
+
+
+    /***
+    run function through onBeforeScriptExecute() when domain matches
+    ***/
+    domainBeforeScriptExecute : function(domainName, handlerFunction) {
+        if(loc.hostname.substr(domainName.length * -1) == domainName) {
+            SGL.onBeforeScriptExecute(handlerFunction);
+        }
     },
 
 
@@ -311,6 +433,48 @@ spenibus_greasemonkey_lib = {
         if(loc.hostname.substr(domainName.length * -1) == domainName) {
             SGL.onReady(handlerFunction);
         }
+    },
+
+
+
+
+    /***
+    mutation observer
+        callback function
+        list object containing the mutations to look for
+        the node to which to attach
+    ***/
+    onMutation : function(callback, mutationList=0, targetNode=0) {
+
+        /***
+        handle params, set default values
+        ***/
+        if(mutationList === 0) {
+            mutationList = {attributes:true, childList:true, characterData:true, subtree:true};
+        }
+        if(targetNode === 0) {
+            targetNode = document;
+        }
+
+
+        let observer = new MutationObserver(callback);
+
+        let f_start = function(){
+            observer.observe(targetNode, mutationList);
+        }
+
+        let f_stop = function(){
+            observer.disconnect();
+        }
+
+        // run
+        f_start();
+
+        return {
+            'observer' : observer,
+            'begin' : f_start,
+            'end' : f_stop,
+        };
     },
 
 
@@ -348,6 +512,8 @@ spenibus_greasemonkey_lib = {
     ***************************************************************************/
 
 
+
+
     /***
     convert a positive integer to an alphanumeric string of base 62
     largest input allowed is 9007199254740992
@@ -359,15 +525,15 @@ spenibus_greasemonkey_lib = {
         num = parseInt(num);
 
         // base 62 dictionary
-        var chr = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        let chr = "0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ";
         chr = chr.split('');
 
         // prepare output
-        var out = '';
+        let out = '';
 
         // convert
         while(num > 0) {
-            var digit = num%62;
+            let digit = num%62;
             out = chr[digit]+out;
             num = (num - digit) / 62;
         }
@@ -391,7 +557,7 @@ spenibus_greasemonkey_lib = {
     cssFix : function(locationBit, locationPattern, cssData) {
 
         // scope instance locally
-        var that = this;
+        let that = this;
 
         // locationb pattern matches the location bit
         if(locationPattern.exec(document.location[locationBit])) {
@@ -410,25 +576,88 @@ spenibus_greasemonkey_lib = {
     get url content
     if handler function is missing, sync mode is enabled
     ***/
-    getUrl : function(url, handler=null) {
+    getUrl : function(url, handler=null, userParams={}) {
 
         // no handler supplied, use sync mode
-        var syncMode = (handler == null) ? true : false;
+        let syncMode = (handler == null) ? true : false;
 
-        var params = {
+        // basic params
+        let params = {
             url      : url
             ,method  : 'GET'
             ,onload  : handler
         }
 
+        // add/override params
+        Object.assign(params, userParams);
+
         if(syncMode) {
             params.synchronous = true;
         }
 
-        var xhr = GM_xmlhttpRequest(params);
+        let xhr = GM_xmlhttpRequest(params);
 
-        if(syncMode) {
-            return xhr.responseText;
+        return syncMode
+            ? xhr.responseText
+            : xhr;
+    },
+
+
+
+
+    /***
+    limit repeated execution of function
+        original callback function
+        timeout in ms
+    useful when a callback is called repeatedly by an event
+    ***/
+    execLimit : function(callback, timeout) {
+
+        // flags
+        wait       = false;
+        delayedRun = false;
+        callback   = callback;
+        timeout    = timeout;
+
+        // return callback wrapper
+        return function() {
+
+            // remember args
+            //args = arguments;
+
+            // idle
+            if(!wait) {
+
+                // activate wait flag
+                wait = true;
+
+                //schedule a timeout
+                setTimeout(function() {
+
+                    // delayed run active
+                    if(delayedRun) {
+
+                        // run callback
+                        callback.apply(this, arguments);
+
+                        // reset delayed flag
+                        delayedRun = false;
+                    }
+
+                    // reset wait flag
+                    wait = false;
+                }, timeout);
+
+                // run callback
+                callback.apply(this, arguments);
+            }
+
+            // currently in wait state but no delayed run is scheduled
+            else if(!delayedRun) {
+
+                // schedule a delayed run
+                delayedRun = true;
+            }
         }
     },
 };
@@ -441,14 +670,31 @@ custom events
 *******************************************************************************/
 
 
+
+
 /***
-pushState
+existing events synonyms
 ***/
-unsafeWindow.history.pushState = exportFunction(function() {
+Object.entries({
+    'DOMContentLoaded' : 'ready'
+}).forEach(function(eventPair){
+    window.addEventListener(eventPair[0], function(){
+        // trigger custom event
+        dispatchEvent(new Event(eventPair[1]));
+    }, false);
+});
 
-    // trigger custom event
-    dispatchEvent(new Event('pushState'));
 
-    // execute original behaviour
-    return history.pushState.apply(history, arguments);
-}, unsafeWindow)
+
+
+/***
+history events
+***/
+['pushState','replaceState'].forEach(function(eventName){
+    unsafeWindow.history[eventName] = exportFunction(function() {
+        // trigger custom event
+        dispatchEvent(new Event(eventName));
+        // execute original behaviour
+        return history[eventName].apply(history, arguments);
+    }, unsafeWindow);
+});
