@@ -456,7 +456,6 @@ spenibus_greasemonkey_lib = {
             targetNode = document;
         }
 
-
         let observer = new MutationObserver(callback);
 
         let f_start = function(){
