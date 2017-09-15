@@ -415,6 +415,20 @@ spenibus_greasemonkey_lib = {
 
 
     /***
+    run function when window triggers "replaceState"
+    ***/
+    onReplaceState : function(func) {
+        let f = function() {
+            window.removeEventListener('replaceState', f);
+            func.apply(this, arguments);
+        }
+        window.addEventListener('replaceState', f, false);
+    },
+
+
+
+
+    /***
     run function through onBeforeScriptExecute() when domain matches
     ***/
     domainBeforeScriptExecute : function(domainName, handlerFunction) {

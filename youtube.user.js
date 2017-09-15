@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20170204-2301
+// @version     20170915-2022
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -19,8 +19,8 @@ creation: 2010-11-12 00:00 +0000
 
 
 /***************************************************************** shorthands */
-var SGL = spenibus_greasemonkey_lib;
-var loc = document.location;
+let SGL = spenibus_greasemonkey_lib;
+let loc = document.location;
 
 
 
@@ -29,8 +29,8 @@ var loc = document.location;
 ********************************************************************************
 ********************************************************************************
 ******************************* disable ajax page loading (history.pushState) */
-if(unsafeWindow.ytspf) {
-    unsafeWindow.ytspf.enabled = false;
+if(unsafeWindow.spf) {
+    unsafeWindow.spf = {};
 }
 
 
@@ -40,7 +40,7 @@ if(unsafeWindow.ytspf) {
 ********************************************************************************
 ********************************************************************************
 ***************************************************************** video links */
-function videoLinks() {
+SGL.onReady(function() {
 
 
     // not watch page, abort
@@ -80,7 +80,7 @@ function videoLinks() {
             +'display:table-cell;'
         +'}'
     );
-    var box = SGL.displayBox('spenibus_videoLinks');
+    let box = SGL.displayBox('spenibus_videoLinks');
 
 
     //********************************************* missing configuration, abort
@@ -94,24 +94,26 @@ function videoLinks() {
     // https://www.quora.com/How-can-I-make-a-YouTube-video-downloader-web-application-from-scratch
     // https://github.com/rg3/youtube-dl/blob/9dd8e46a2d0860421b4bb4f616f05e5ebd686380/youtube_dl/extractor/youtube.py#L625
 
+
     // default
-    var sigDecode = function(){ return 'nosig'; };
+    box.set('fetching sigDecode');
+    let sigDecode = function(){ return 'nosig'; };
 
     // get the real function, also trying IIFE without parentheses
     !function() {
         // get assets source
-        var content = GM_xmlhttpRequest({
+        let content = GM_xmlhttpRequest({
             method:      "GET",
             url:         unsafeWindow.ytplayer.config.assets.js,
             synchronous: true,
         }).responseText;
 
         // move vars declaration outside IIFE so we can access them
-        var m = content.match(/{var window=this;(var [\s\S]*?;)/)
+        let m = content.match(/{var window=this;(var [\s\S]*?;)/)
         if(!m){
             return;
         }
-        var varsDeclaration = m[1];
+        let varsDeclaration = m[1];
         content = varsDeclaration + content.replace(varsDeclaration, '');
 
         // eval the code to access the vars in this scope
@@ -119,14 +121,14 @@ function videoLinks() {
 
         // get decipher function name
         //var re = /[\$\w]+\.sig\|\|([\$\w]+)\(/i;
-        var re = /\.set\("signature",([\$\w]+)\(/i;
-
+        //let re = /\.set\("signature",([\$\w]+)\(/i;
         //set("signature",Gm(
-        var m = re.exec(content);
+
+        m = (/\.set\("signature",([\$\w]+)\(/i).exec(content);
         if(!m){
             return;
         }
-        var funcName = m[1];
+        let funcName = m[1];
 
         // bind function to a usable local name
         eval('var f = ' + funcName);
@@ -138,125 +140,80 @@ function videoLinks() {
     }();
 
 
-    //********************************************************* prepare dash url
-    var dashurl = (function() {
-        if(unsafeWindow.ytplayer.config.args.dashmpd) {
-            var tmp = unsafeWindow.ytplayer.config.args.dashmpd.match(/manifest\/dash\/(.*)/i)[1].split('/');
-            var url = '';
-            for(i=0; i<tmp.length; i=i+2) {
-                url += '&'+unescape(tmp[i])+'='+unescape(tmp[i+1]);
-            }
-            url = url.substr(1);
-            url += '&ratebypass=yes';
-            return url;
-        }
-        return '';
-    })();
-
-
     //***************************************************************** video id
-    var videoId = (function(){
+    let videoId = (function(){
         box.set('fetching video id');
 
-        // video id
-        var tmp = document.querySelector('meta[itemprop=videoId]');
-        tmp = tmp && tmp.getAttribute
-            ? tmp.getAttribute('content')
-            : false;
-
-        return tmp;
+        return unsafeWindow.ytplayer.config.args.video_id;
     })();
 
 
     //***************************************************************** duration
-    var duration = (function(){
+    let duration = (function(){
         box.set('fetching duration');
 
-        var tmp = document.querySelector('meta[itemprop=duration]');
-        tmp = tmp.content
-            ? tmp.content.match(/^PT(\d+)M(\d+)S$/i)
-            : [0,0];
+        let len = unsafeWindow.ytplayer.config.args.length_seconds;
 
-        var h = Math.floor(tmp[1]/60);
-        var m = tmp[1]%60;
-        var s = tmp[2];
+        let h = Math.floor(len/3600);
+        let m = Math.floor((len%3600)/60);
+        let s = Math.floor(len%60);
 
         return ('0'+h).slice(-2)+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2);
     })();
 
 
     //*********************************************************** published time
-    var published = (function(){
+    let published = (function(){
         box.set('fetching published time');
 
-        var tmp = {};
+        let pub = {};
 
         if(!videoId) {
-            return tmp;
+            return pub;
         }
 
-        var str = GM_xmlhttpRequest({
+        let str = GM_xmlhttpRequest({
             method:      "GET",
             url:         'https://www.youtube.com/list_ajax?style=json&action_get_templist=1&video_ids='+videoId,
             synchronous: true,
         });
 
-        tmp.date = JSON.parse(
+        pub.date = JSON.parse(
             str.responseText || '{ "video" : [ { "time_created" : 0 } ] }'
         ).video[0].time_created;
 
-        tmp.date = tmp.date > 0
-            ? new Date(tmp.date * 1000)
+        pub.date = pub.date > 0
+            ? new Date(pub.date * 1000)
             : false;
 
-        tmp.formatted = tmp.date ? SGL.timeFormatUTC('Ymd-His', tmp.date)+'-UTC' : '';
+        pub.formatted = pub.date ? SGL.timeFormatUTC('Ymd-His', pub.date)+'-UTC' : '';
 
-        /**
-        tmp.formatted = tmp.date
-            ? tmp.date.getUTCFullYear()
-                +''+('0'+(tmp.date.getUTCMonth()+1)).slice(-2)
-                +''+('0'+tmp.date.getUTCDate()).slice(-2)
-                +'-'+('0'+tmp.date.getUTCHours()).slice(-2)
-                +''+('0'+tmp.date.getUTCMinutes()).slice(-2)
-                +''+('0'+tmp.date.getUTCSeconds()).slice(-2)
-                +'-UTC'
-            : '';
-        /**/
-
-        return tmp;
+        return pub;
     })();
 
 
     //********************************************************************* user
-    var user = (function(){
+    let user = (function(){
         box.set('fetching user');
 
-        var id = document.querySelector('meta[itemprop=channelId]').getAttribute('content');
-
-        var name = document.querySelector('div[class=yt-user-info] > a[data-ytid='+id+']');
-        name = name.text;
-
-        return name;
+        return unsafeWindow.ytplayer.config.args.author;
     })();
 
 
     //******************************************************************** title
-    var videoTitle = (function(){
+    let videoTitle = (function(){
         box.set('fetching title');
 
-        var tmp = unsafeWindow.ytplayer.config.args.title
+        return unsafeWindow.ytplayer.config.args.title
             ? unsafeWindow.ytplayer.config.args.title
             : '';
-
-        return tmp;
     })();
 
-
     //************************************************************** build title
-    var title = (function(){
+    let title = (function(){
         box.set('building title');
 
-        var str = user+' - '+published.formatted+' - '+videoTitle;
+        let str = user+' - '+published.formatted+' - '+videoTitle;
 
         // sanitize: special chars
         str = str.replace(/[\\\/\|\*\?<>:"]/g, '-');
@@ -270,7 +227,7 @@ function videoLinks() {
 
     //**************************************************** mimetype to extension
     box.set('building ext');
-    var mimeToExt = {
+    let mimeToExt = {
         'video/webm'  : 'webm',
         'video/mp4'   : 'mp4',
         'video/x-flv' : 'flv',
@@ -281,18 +238,18 @@ function videoLinks() {
 
 
     //************************************************ fmt: number to resolution
-    var numberResolution = (function(){
+    let numberResolution = (function(){
         box.set('building numRes');
 
-        var list = unsafeWindow.ytplayer.config.args.fmt_list;
+        let list = unsafeWindow.ytplayer.config.args.fmt_list;
         if(!list) {
             return;
         }
 
-        var out = {};
-        var items = list.split(',');
-        for(var i in items) {
-            var tmp = items[i].split('/');
+        let out = {};
+        let items = list.split(',');
+        for(let i in items) {
+            let tmp = items[i].split('/');
             out[tmp[0]] = tmp[1];
         }
         return out;
@@ -300,15 +257,15 @@ function videoLinks() {
 
 
     //************************************************************ prepare items
-    var items = (function(){
+    let items = (function(){
         box.set('preparing items');
 
-        var obj = {
+        let obj = {
             data  : {},
             order : [],
         };
 
-        var src = '';
+        let src = '';
         if(unsafeWindow.ytplayer.config.args.url_encoded_fmt_stream_map) {
             src += (src ? ',' : '')+unsafeWindow.ytplayer.config.args.url_encoded_fmt_stream_map;
         }
@@ -317,20 +274,20 @@ function videoLinks() {
         }
 
         if(src) {
-            var map = src.split(',');
+            let map = src.split(',');
 
-            for(var i=0; i<map.length; i++) {
-                var args = map[i].split('&');
+            for(let i=0; i<map.length; i++) {
+                let args = map[i].split('&');
 
                 // get data
-                var data = {};
-                for(var n in args) {
-                    var tmp = args[n].split('=');
+                let data = {};
+                for(let n in args) {
+                    let tmp = args[n].split('=');
                     data[tmp[0]] = unescape(tmp[1]);
                 }
 
                 // create item
-                var item = {};
+                let item = {};
                 item.itag    = data.itag;
                 item.title   = title;
                 item.ext     = mimeToExt[data.type.split(';')[0]];
@@ -356,11 +313,11 @@ function videoLinks() {
 
 
     //********************************************************* build links list
-    var html_items = (function(obj){
+    let html_items = (function(obj){
         box.set('building links list');
-        var str = '';
-        for(var i in obj.order) {
-            var item = obj.data[obj.order[i]];
+        let str = '';
+        for(let i in obj.order) {
+            let item = obj.data[obj.order[i]];
             if(item) {
                 str += ''
                     +'<div>'
@@ -388,24 +345,19 @@ function videoLinks() {
         +'</div>'
         +html_items
     );
-}
-window.addEventListener('DOMContentLoaded', videoLinks, false);
-
-
+});
 
 
 /*******************************************************************************
 ********************************************************************************
 ********************************************************************************
 ************************************************************** proxfree links */
-function proxfreeLinks() {
-
+SGL.onReady(function(){
 
     // not watch page, abort
     if(loc.pathname != '/watch') {
         return;
     }
-
 
     // init box and css
     SGL.css(''
@@ -419,31 +371,30 @@ function proxfreeLinks() {
         +'}'
     );
 
-
-    var box = SGL.displayBox('spenibus_proxfreeLinks');
+    let box = SGL.displayBox('spenibus_proxfreeLinks');
     box.set('<div>pf</div>');
-
 
     // get proxfree
     GM_xmlhttpRequest({
-       method: 'POST',
-       url:    'http://fr.proxfree.com/request.php?do=go',
-       data:   'get='+encodeURIComponent(loc.href),
-       headers: {
+        method: 'POST',
+        url:    'https://uk.proxfree.com/request.php?do=go',
+        data:   'get='+encodeURIComponent(loc.href),
+        headers: {
             'Content-Type' : 'application/x-www-form-urlencoded',
         },
         onload: function(r) {
-            var lnk = r.responseText.match(/(proxfree\.com\/permalink\.php\?.*\);)/i);
+            let lnk = r.responseText.match(/(proxfree\.com\/permalink\.php\?.*\);)/i);
+
             if(lnk) {
-                box.append(
-                    '<div><a href="http://fr.'+lnk[0]+'">pf:fr</a></div>'+
-                    '<div><a href="http://tx.'+lnk[0]+'">pf:tx</a></div>'
+                box.append(''
+                    +'<div><a href="http://fr.'+lnk[0]+'">pf:fr</a></div>'
+                    +'<div><a href="http://uk.'+lnk[0]+'">pf:uk</a></div>'
+                    +'<div><a href="http://tx.'+lnk[0]+'">pf:tx</a></div>'
                 );
             }
         }
     });
-}
-window.addEventListener('DOMContentLoaded', proxfreeLinks, false);
+});
 
 
 
@@ -454,18 +405,18 @@ window.addEventListener('DOMContentLoaded', proxfreeLinks, false);
 ********************************************************** faster flash wmode */
 function wmode() {
 
-    var selectorMap = {
+    let selectorMap = {
         watch : 'embed#movie_player',
         embed : '#player > embed',
     }
 
 
     // page type
-    var page = loc.pathname.match(/^\/(watch|embed)/);
+    let page = loc.pathname.match(/^\/(watch|embed)/);
 
 
     // get player
-    var playerNode = page
+    let playerNode = page
         ? document.querySelector(selectorMap[page[1]])
         : false;
 
@@ -482,7 +433,7 @@ function wmode() {
 
     // show success (watch page only)
     if(page[1] == 'watch') {
-        var box = SGL.displayBox();
+        let box = SGL.displayBox();
         box.set('<span style="color:green;">wm</span>');
     }
 }
