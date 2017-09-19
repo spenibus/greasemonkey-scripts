@@ -50,36 +50,44 @@ SGL.onReady(function() {
 
 
     // init box and css
-    SGL.css(''
-        +'#spenibus_videoLinks {'
-            +'display:table;'
-            +'white-space:nowrap;'
-            +'text-align:right;'
-        +'}'
-        +'#spenibus_videoLinks > div {'
-            +'display:table-row;'
-        +'}'
-        +'#spenibus_videoLinks > div > div {'
-            +'display:table-cell;'
-            +'padding:0;'
-        +'}'
-        // all cells except first
-        +'#spenibus_videoLinks > div > div ~ div {'
-            +'padding-left:8px;'
-        +'}'
-        // cell: link
-        +'#spenibus_videoLinks > div > div:last-child {'
-            +'text-align:left;'
-        +'}'
-        // hide cells (except first)
-        +'#spenibus_videoLinks > div > div ~ div {'
-            +'display:none;'
-        +'}'
-        // hover: show cells
-        +':hover > #spenibus_videoLinks > div > div ~ div {'
-            +'display:table-cell;'
-        +'}'
-    );
+    SGL.css('\
+        #spenibus_videoLinks {\
+            display:table;\
+            white-space:nowrap;\
+            text-align:right;\
+        }\
+        #spenibus_videoLinks > div > div a {\
+            text-decoration:none;\
+            color:#00F;\
+            display:block;\
+        }\
+        #spenibus_videoLinks > div > div a:hover {\
+            background-color:rgba(0,255,0,0.2);\
+        }\
+        #spenibus_videoLinks > div {\
+            display:table-row;\
+        }\
+        #spenibus_videoLinks > div > div {\
+            display:table-cell;\
+            padding:0;\
+        }\
+        /* all cells except first */\
+        #spenibus_videoLinks > div > div ~ div {\
+            padding-left:8px;\
+        }\
+        /* cell: link */\
+        #spenibus_videoLinks > div > div:last-child {\
+            text-align:left;\
+        }\
+        /* hide cells (except first) */\
+        #spenibus_videoLinks > div > div ~ div {\
+            display:none;\
+        }\
+        /* hover: show cells */\
+        :hover > #spenibus_videoLinks > div > div ~ div {\
+            display:table-cell;\
+        }\
+    ');
     let box = SGL.displayBox('spenibus_videoLinks');
 
 
