@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20170915-2022
+// @version     20170919-1038
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
