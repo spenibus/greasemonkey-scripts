@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20170919-1038
+// @version     20171123-0047
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -28,10 +28,17 @@ let loc = document.location;
 /*******************************************************************************
 ********************************************************************************
 ********************************************************************************
-******************************* disable ajax page loading (history.pushState) */
-if(unsafeWindow.spf) {
-    unsafeWindow.spf = {};
-}
+************************* run stuff on initial load and then page transitions */
+SGL.onReady(function(){
+    videoLinks();
+    proxLinks();
+});
+
+
+document.addEventListener('spfdone', function() {
+    videoLinks();
+    proxLinks();
+});
 
 
 
@@ -40,7 +47,7 @@ if(unsafeWindow.spf) {
 ********************************************************************************
 ********************************************************************************
 ***************************************************************** video links */
-SGL.onReady(function() {
+let videoLinks = function() {
 
 
     // not watch page, abort
@@ -353,14 +360,14 @@ SGL.onReady(function() {
         +'</div>'
         +html_items
     );
-});
+}
 
 
 /*******************************************************************************
 ********************************************************************************
 ********************************************************************************
 ************************************************************** proxfree links */
-SGL.onReady(function(){
+let proxLinks = function(){
 
     // not watch page, abort
     if(loc.pathname != '/watch') {
@@ -402,47 +409,4 @@ SGL.onReady(function(){
             }
         }
     });
-});
-
-
-
-
-/*******************************************************************************
-********************************************************************************
-********************************************************************************
-********************************************************** faster flash wmode */
-function wmode() {
-
-    let selectorMap = {
-        watch : 'embed#movie_player',
-        embed : '#player > embed',
-    }
-
-
-    // page type
-    let page = loc.pathname.match(/^\/(watch|embed)/);
-
-
-    // get player
-    let playerNode = page
-        ? document.querySelector(selectorMap[page[1]])
-        : false;
-
-
-    // no player, abort
-    if(!playerNode) {
-        return;
-    }
-
-
-    // set wmode
-    playerNode.setAttribute('wmode', 'direct');
-
-
-    // show success (watch page only)
-    if(page[1] == 'watch') {
-        let box = SGL.displayBox();
-        box.set('<span style="color:green;">wm</span>');
-    }
 }
-window.addEventListener('DOMContentLoaded', wmode, false);
