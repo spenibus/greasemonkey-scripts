@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180223-2212
+// @version     20180223-2216
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -60,10 +60,10 @@ let videoLinks = function() {
     SGL.css('\
         /* ensure full screen player is on top of the display box which should itself be above the top bar */\
         #spenibus_display_box_container {\
-            z-index:2000000000;\
+            z-index:2000000000 !important;\
         }\
         #movie_player.ytp-fullscreen {\
-            z-index:2000000001;\
+            z-index:2000000001 !important;\
         }\
         /* internals */\
         #spenibus_videoLinks {\
