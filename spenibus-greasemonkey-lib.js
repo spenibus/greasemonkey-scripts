@@ -103,7 +103,7 @@ spenibus_greasemonkey_lib = {
                     +'position:fixed;'
                     +'top:0;'
                     +'left:0;'
-                    +'z-index:65536;'
+                    +'z-index:32768;'
                     +'font:bold 10px Tahoma;'
                     +'color:#000;'
                     +'background-color:#FFA;'
