@@ -58,10 +58,14 @@ let videoLinks = function() {
 
     // init box and css
     SGL.css('\
-        /* ensure full screen player is on top of the display box */\
-        #movie_player.ytp-fullscreen {\
-            z-index:32769;\
+        /* ensure full screen player is on top of the display box which should itself be above the top bar */\
+        #spenibus_display_box_container {\
+            z-index:2000000000;\
         }\
+        #movie_player.ytp-fullscreen {\
+            z-index:2000000001;\
+        }\
+        /* internals */\
         #spenibus_videoLinks {\
             display:table;\
             white-space:nowrap;\
