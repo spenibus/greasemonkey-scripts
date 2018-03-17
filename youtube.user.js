@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180223-2216
+// @version     20180317-1839
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -143,15 +143,14 @@ let videoLinks = function() {
         eval(content);
 
         // get decipher function name
-        //var re = /[\$\w]+\.sig\|\|([\$\w]+)\(/i;
-        //let re = /\.set\("signature",([\$\w]+)\(/i;
-        //set("signature",Gm(
-
-        m = (/\.set\("signature",([\$\w]+)\(/i).exec(content);
+        // 2018-03-17 18:18 utc
+        // line 2603 in yts/jsbin/player-vflHDhBq1/en_GB/base.js
+        // (b||(b="signature"),d.set(b,DK(c)));return d};
+        m = (/([\$\w]+)="signature"\),([\$\w]+).set\(\1,([\$\w]+)\(/i).exec(content);
         if(!m){
             return;
         }
-        let funcName = m[1];
+        let funcName = m[3];
 
         // bind function to a usable local name
         eval('var f = ' + funcName);
