@@ -1,10 +1,10 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name        youtube
 // @namespace   greasemonkey@spenibus
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180317-1839
+// @version     20180324-2251
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -29,13 +29,17 @@ let loc = document.location;
 ********************************************************************************
 ********************************************************************************
 ************************* run stuff on initial load and then page transitions */
-SGL.onReady(function(){
-    videoLinks();
-    proxLinks();
+
+/**
+SGL.onReady(z=>{
+
 });
+/**/
 
-
-document.addEventListener('spfdone', function() {
+document.addEventListener('yt-page-data-updated', z=>{
+//document.addEventListener('yt-navigate-finish', z=>{
+//document.addEventListener('yt-update-title', z=>{
+//document.addEventListener('yt-player-updated', z=>{
     videoLinks();
     proxLinks();
 });
@@ -106,9 +110,16 @@ let videoLinks = function() {
     let box = SGL.displayBox('spenibus_videoLinks');
 
 
+    // get player config
+    let ytplayer = {};
+    (z=>{
+        ytplayer.config = unsafeWindow.document.getElementById('page-manager').__data__.data.player;
+    })();
+
+
     //********************************************* missing configuration, abort
-    if(!unsafeWindow.ytplayer) {
-        box.set('ytplayer not found');
+    if(!ytplayer.config) {
+        box.set('ytplayer config not found');
         return;
     }
 
@@ -122,12 +133,13 @@ let videoLinks = function() {
     box.set('fetching sigDecode');
     let sigDecode = function(){ return 'nosig'; };
 
-    // get the real function, also trying IIFE without parentheses
-    !function() {
+
+    // get the real function from source
+    (z=>{
         // get assets source
         let content = GM_xmlhttpRequest({
             method:      "GET",
-            url:         unsafeWindow.ytplayer.config.assets.js,
+            url:         ytplayer.config.assets.js,
             synchronous: true,
         }).responseText;
 
@@ -146,7 +158,9 @@ let videoLinks = function() {
         // 2018-03-17 18:18 utc
         // line 2603 in yts/jsbin/player-vflHDhBq1/en_GB/base.js
         // (b||(b="signature"),d.set(b,DK(c)));return d};
-        m = (/([\$\w]+)="signature"\),([\$\w]+).set\(\1,([\$\w]+)\(/i).exec(content);
+        m = (
+            /([\$\w]+)="signature"\),([\$\w]+).set\(\1,([\$\w]+)\(/i
+        ).exec(content);
         if(!m){
             return;
         }
@@ -159,22 +173,21 @@ let videoLinks = function() {
         sigDecode = function(){
             return f.apply(this, arguments);
         }
-    }();
+    })();
 
 
     //***************************************************************** video id
-    let videoId = (function(){
+    let videoId = (z=>{
         box.set('fetching video id');
-
-        return unsafeWindow.ytplayer.config.args.video_id;
+        return ytplayer.config.args.video_id;
     })();
 
 
     //***************************************************************** duration
-    let duration = (function(){
+    let duration = (z=>{
         box.set('fetching duration');
 
-        let len = unsafeWindow.ytplayer.config.args.length_seconds;
+        let len = ytplayer.config.args.length_seconds;
 
         let h = Math.floor(len/3600);
         let m = Math.floor((len%3600)/60);
@@ -185,7 +198,7 @@ let videoLinks = function() {
 
 
     //*********************************************************** published time
-    let published = (function(){
+    let published = (z=>{
         box.set('fetching published time');
 
         let pub = {};
@@ -215,24 +228,19 @@ let videoLinks = function() {
 
 
     //********************************************************************* user
-    let user = (function(){
-        box.set('fetching user');
-
-        return unsafeWindow.ytplayer.config.args.author;
-    })();
+    box.set('fetching user');
+    let user = ytplayer.config.args.author;
 
 
     //******************************************************************** title
-    let videoTitle = (function(){
-        box.set('fetching title');
+    box.set('fetching title');
+    let videoTitle = ytplayer.config.args.title
+        ? ytplayer.config.args.title
+        : '';
 
-        return unsafeWindow.ytplayer.config.args.title
-            ? unsafeWindow.ytplayer.config.args.title
-            : '';
-    })();
 
     //************************************************************** build title
-    let title = (function(){
+    let title = (z=>{
         box.set('building title');
 
         let str = user+' - '+published.formatted+' - '+videoTitle;
@@ -260,10 +268,10 @@ let videoLinks = function() {
 
 
     //************************************************ fmt: number to resolution
-    let numberResolution = (function(){
+    let numberResolution = (z=>{
         box.set('building numRes');
 
-        let list = unsafeWindow.ytplayer.config.args.fmt_list;
+        let list = ytplayer.config.args.fmt_list;
         if(!list) {
             return;
         }
@@ -279,7 +287,7 @@ let videoLinks = function() {
 
 
     //************************************************************ prepare items
-    let items = (function(){
+    let items = (z=>{
         box.set('preparing items');
 
         let obj = {
@@ -288,11 +296,11 @@ let videoLinks = function() {
         };
 
         let src = '';
-        if(unsafeWindow.ytplayer.config.args.url_encoded_fmt_stream_map) {
-            src += (src ? ',' : '')+unsafeWindow.ytplayer.config.args.url_encoded_fmt_stream_map;
+        if(ytplayer.config.args.url_encoded_fmt_stream_map) {
+            src += (src ? ',' : '')+ytplayer.config.args.url_encoded_fmt_stream_map;
         }
-        if(unsafeWindow.ytplayer.config.args.adaptive_fmts) {
-            src += (src ? ',' : '')+unsafeWindow.ytplayer.config.args.adaptive_fmts;
+        if(ytplayer.config.args.adaptive_fmts) {
+            src += (src ? ',' : '')+ytplayer.config.args.adaptive_fmts;
         }
 
         if(src) {
@@ -335,7 +343,7 @@ let videoLinks = function() {
 
 
     //********************************************************* build links list
-    let html_items = (function(obj){
+    let html_items = (obj=>{
         box.set('building links list');
         let str = '';
         for(let i in obj.order) {
