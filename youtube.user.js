@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180324-2251
+// @version     20180331-2251
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -29,19 +29,14 @@ let loc = document.location;
 ********************************************************************************
 ********************************************************************************
 ************************* run stuff on initial load and then page transitions */
-
-/**
 SGL.onReady(z=>{
-
-});
-/**/
-
-document.addEventListener('yt-page-data-updated', z=>{
-//document.addEventListener('yt-navigate-finish', z=>{
-//document.addEventListener('yt-update-title', z=>{
-//document.addEventListener('yt-player-updated', z=>{
     videoLinks();
     proxLinks();
+
+    document.addEventListener('yt-page-data-updated', z=>{
+        videoLinks();
+        proxLinks();
+    });
 });
 
 
