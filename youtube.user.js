@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180331-2251
+// @version     20180403-0244
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -105,10 +105,18 @@ let videoLinks = function() {
     let box = SGL.displayBox('spenibus_videoLinks');
 
 
-    // get player config
+    /*
+    get player config
+    try page manager data first, default to global config if not avail
+    note that global config will be obsolete after navigating away from the initial page
+    we still bother to check global config to ensure better background loading
+    */
     let ytplayer = {};
     (z=>{
-        ytplayer.config = unsafeWindow.document.getElementById('page-manager').__data__.data.player;
+        let node = unsafeWindow.document.getElementById('page-manager');
+        ytplayer.config = node
+            ? node.__data__.data.player
+            : unsafeWindow.window.ytplayer.config;
     })();
 
 
