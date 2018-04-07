@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20180407-0207
+// @version     20180407-0226
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -1079,28 +1079,37 @@ function archives() {
             item.node.setAttribute('data-name', item.meta.MEDIA.NAME);
             item.node.classList.add('vod');
 
-            item.node.innerHTML = ''
-                +'<div></div>'
-                +'<div>'+item.rate+' kbps</a></div>'
-                +'<div><a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a></div>'
-                +'<div>'
-                    +'<div class="size">'+item.size+' Mio</div>'
-                    +'<div class="filesCount"></div>'
-                +'</div>'
-                +'<div><div class="list"></div></div>'
+            item.node.innerHTML = '\
+                <div></div>\
+                <div>'+item.rate+' kbps</a></div>\
+                <div>\
+                    <a href="'+item.url+'">'+item.meta.MEDIA.NAME+'</a>\
+                </div>\
+                <div>\
+                    <div class="size">'+item.size+' Mio</div>\
+                    <div class="filesCount"></div>\
+                </div>\
+                <div><div class="list"><a href="javascript:void(0);">click to get chunks links</a></div></div>\
+                ';
 
             box.node.appendChild(item.node);
 
-            // get files
-            GM_xmlhttpRequest({
-                method  : 'GET',
-                url     : item.url,
-                headers : {
-                    'Client-ID' : cfg.clientId
-                },
-                context : item,
-                onload  : vodPlaylistLinks,
-            });
+            // run right now to keep values
+            (function(item, vodPlaylistLinks){
+                item.node.addEventListener('click', function(){
+
+                    // get files
+                    GM_xmlhttpRequest({
+                        method  : 'GET',
+                        url     : item.url,
+                        headers : {
+                            'Client-ID' : cfg.clientId
+                        },
+                        context : item,
+                        onload  : vodPlaylistLinks,
+                    });
+                }, false);
+            })(item, vodPlaylistLinks);
         }
     }
 
