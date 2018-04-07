@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20170129-2050
+// @version     20180407-0207
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -327,7 +327,7 @@ function quickLinks() {
         +'<div>'
             +'<a href="https://player.twitch.tv/?channel='+channel+'">popout</a>'
             +' &bull; '
-            +'<a href="https://www.twitch.tv/'+channel+'/chat">chat</a>'
+            +'<a href="https://www.twitch.tv/popout/'+channel+'/chat">chat</a>'
         +'</div>'
     );
 }
