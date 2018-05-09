@@ -488,7 +488,7 @@ function live() {
 
         // get token
         getUrl(
-            'http://api.twitch.tv/api/channels/'+vars.channel+'/access_token'
+            'https://api.twitch.tv/api/channels/'+vars.channel+'/access_token'
             ,tokenHandler
         );
 
