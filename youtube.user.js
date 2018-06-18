@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180403-0244
+// @version     20180618-2150
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -33,10 +33,13 @@ SGL.onReady(z=>{
     videoLinks();
     proxLinks();
 
+    // add actual listener after first event being fired to avoid "double load"
     document.addEventListener('yt-page-data-updated', z=>{
-        videoLinks();
-        proxLinks();
-    });
+        document.addEventListener('yt-page-data-updated', z=>{
+            videoLinks();
+            proxLinks();
+        });
+    }, {once:true});
 });
 
 
