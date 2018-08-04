@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20180509-0133
+// @version     20180804-1909
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -534,6 +534,7 @@ function live() {
 
         var playlist = xhr.responseText;
 
+
         // not a playlist, abort
         if(playlist.substr(0,7) != '#EXTM3U') {
             livePresent('not a playlist');
@@ -804,193 +805,45 @@ function archives() {
     })();
 
 
-
-
-    //************************************************ get video info and chunks
+    //********************************************************* get archive info
     function getVideoInfo() {
 
         // update status
-        box.set('fetching video info/chunks');
+        box.set('fetching archive info');
 
         // store urls
         data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;
-        data.chunkUrl = 'https://api.twitch.tv/api/videos/'+data.archiveId;
-
-
-        // triage: new vod, playlist | old vod
-        var nextStep = data.type == 'videos' ? getAccessToken : buildList;
-
-
-        // get video info
+        
+        // fetch info
         getUrl(
             data.infoUrl
-            ,infoHandler
-        );
+            ,xhr=>{
+                // store
+                data.info = xhr.responseText
+                    ? JSON.parse(xhr.responseText)
+                    : false;
 
+                // archive start as timestamp and string
+                data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
+                data.startStr = SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC';
 
-        // get video chunks
-        getUrl(
-            data.chunkUrl
-            ,chunkHandler
-        );
+                // archive duration as timestamp and string
+                data.duration    = data.info.length;
+                data.durationStr = durationFormat(data.duration);
 
+                // archive title as raw and windows filename safe
+                data.title       = data.info.title;
+                data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
 
-        function infoHandler(xhr) {
-
-            // store
-            data.info = xhr.responseText
-                ? JSON.parse(xhr.responseText)
-                : false;
-
-            // archive start as timestamp and string
-            data.start    = Math.round(new Date(data.info.recorded_at).getTime() / 1000);
-            data.startStr = SGL.timeFormatUTC('Ymd-His', data.start*1000)+'-UTC';
-
-            // archive duration as timestamp and string
-            data.duration    = data.info.length;
-            data.durationStr = durationFormat(data.duration);
-
-            // archive title as raw and windows filename safe
-            data.title       = data.info.title;
-            data.titleClean  = data.title.replace(/[\:*?"<>|/]/g, '_');
-
-            // next step
-            nextStep();
-        }
-
-
-        function chunkHandler(xhr){
-
-            // store
-            data.chunks = xhr.responseText
-                ? JSON.parse(xhr.responseText)
-                : false;
-            data.chunks = data.chunks && data.chunks.chunks
-                ? data.chunks.chunks
-                : false;
-
-            // next step
-            nextStep();
-        }
-    }
-
-
-    //********************************************************* build links list
-    function buildList() {
-
-        // need both info and chunks to be available
-        if(!data.info || !data.chunks) {
-            return;
-        }
-
-
-        // update status
-        box.set('building list');
-
-
-        // available archive qualities
-        data.qualities = [];
-        for(var quality in data.chunks) {
-            data.qualities.push(quality);
-        }
-
-        // base quality reference
-        data.qualityRef = data.qualities[0];
-
-        // archive chunks count
-        data.chunksCount = data.chunks[data.qualityRef].length;
-
-        // init output buffer
-        var html = '';
-
-        // init start time offset
-        var startOffset = 0;
-
-        // build list
-        for(var chunkId=0; chunkId<data.chunksCount; ++chunkId) {
-
-            // chunk start time as timestamp and string
-            var chunkStart    = data.start + startOffset;
-            var chunkStartStr = SGL.timeFormatUTC('Ymd-His', chunkStart*1000)+'-UTC';
-
-            // chunk duration as timestamp and string
-            var chunkDuration    = data.chunks[data.qualityRef][chunkId].length;
-            var chunkDurationStr = durationFormat(chunkDuration);
-
-            // is chunk audio muted ?
-            var chunkMuted = data.chunks[data.qualityRef][chunkId].upkeep == 'fail'
-                ? true
-                : false;
-
-            // count muted chunks
-            if(chunkMuted) {
-                ++data.chunksMutedCount;
+                // next step
+                getAccessToken();
             }
-
-            // chunk title
-            var chunkTitle = 'twitch'
-                +' - '+data.info.channel.name
-                +' - '+chunkStartStr
-                +' - '+data.titleClean
-                +' - '+data.info.broadcast_id;
-
-            // chunk links of available qualities
-            var linksHtml = '';
-            for(var qualityId=0; qualityId<data.qualities.length; ++qualityId) {
-
-                var quality = data.qualities[qualityId];
-
-                linksHtml += ''
-                    +'<div><a href="'+data.chunks[quality][chunkId].url+'">'
-                       +'<span class="extra">'+chunkTitle+' - </span>'+quality
-                    +'</a></div>';
-            }
-
-            // finalize chunk presentation
-            html += ''
-            +'<div class="archive" title="'+chunkTitle+'">'
-                +'<div>'+(parseInt(chunkId)+1)+'</div>'
-                +'<div>'+chunkStartStr+'</div>'
-                +'<div>'+chunkDurationStr+'</div>'
-                +'<div>'+(chunkMuted ? '<span class="muted">muted</span>' : '')+'</div>'
-                +linksHtml
-            +'</div>';
-
-            // increment start time offset
-            startOffset += data.chunks[data.qualityRef][chunkId].length;
-        }
-
-
-        //********************************************************* display html
-        box.set(''
-            +'<div class="header">'
-                +'<div>A<br/>'+data.chunksCount+'</div>'
-                +'<div>start<br/><a href="'+data.chunkUrl+'">cfg</a></div>'
-                +'<div>duration<br/>'+data.durationStr+'</div>'
-                +'<div>muted<br/>'+data.chunksMutedCount+'/'+data.chunksCount+'</div>'
-            +'</div>'
-            +html
         );
     }
-
-
-
-
-    /***************************************************************************
-    ****************************************************************************
-    ****************************************************************************
-    ************************************************* alt: playlist vod (/v/) */
-
-
 
 
     //********************************************************* get access token
     function getAccessToken() {
-
-        // need both info and chunks to be available
-        if(!data.info || !data.chunks) {
-            return;
-        }
 
         GM_xmlhttpRequest({
             method  : 'GET',
@@ -1008,21 +861,20 @@ function archives() {
                     return;
                 }
 
-                // next step
-                getVodInfo();
+                // get master playlist
+                vodMasterPlaylist();
             },
         });
     }
 
 
-
-
-    //************************************************ get video info and chunks
-    function getVodInfo() {
+    //********************************************** get archive master playlist
+    function vodMasterPlaylist() {
 
         data.vodUrl = 'http://usher.twitch.tv/vod/'+data.vodId
             +'?nauthsig='+data.sig
-            +'&nauth='+encodeURIComponent(data.accessToken);
+            +'&nauth='+encodeURIComponent(data.accessToken)
+            +'&playlist_include_framerate=true';
 
         GM_xmlhttpRequest({
             method  : 'GET',
@@ -1035,9 +887,7 @@ function archives() {
     }
 
 
-
-
-    //********************************************************** master playlist
+    //********************************* master playlist links to video playlists
     function vodMasterPlaylistLinks(xhr) {
 
         var str   = xhr.responseText;
@@ -1112,8 +962,6 @@ function archives() {
             })(item, vodPlaylistLinks);
         }
     }
-
-
 
 
     //************************************************* vod playlist files links
