@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20180804-1909
+// @version     20180804-1931
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -946,8 +946,7 @@ function archives() {
 
             // run right now to keep values
             (function(item, vodPlaylistLinks){
-                item.node.addEventListener('click', function(){
-
+                item.node.querySelector('.list > a').addEventListener('click', function(){
                     // get files
                     GM_xmlhttpRequest({
                         method  : 'GET',
