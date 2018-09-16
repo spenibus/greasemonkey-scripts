@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180908-0058
+// @version     20180916-2238
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -310,6 +310,7 @@ let videoLinks = function() {
         if(src) {
             let map = src.split(',');
 
+
             for(let i=0; i<map.length; i++) {
                 let args = map[i].split('&');
 
@@ -325,7 +326,7 @@ let videoLinks = function() {
                 item.itag    = data.itag;
                 item.title   = title;
                 item.ext     = mimeToExt[data.type.split(';')[0]];
-                item.size    = data.size    ? data.size    : numberResolution[data.itag];
+                item.size    = data.size    ? data.size+' | '+data.quality_label+data.fps : numberResolution[data.itag];
                 item.bitrate = data.bitrate ? data.bitrate : 0;
                 item.weight  = data.clen    ? data.clen    : 0;
 
