@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180916-2238
+// @version     20180917-0103
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -290,15 +290,15 @@ let videoLinks = function() {
     })();
 
 
-    //************************************************************ prepare items
-    let items = (z=>{
-        box.set('preparing items');
+    //************************************************** prepare items container
+    let items = [];
 
-        let obj = {
-            data  : {},
-            order : [],
-        };
 
+    //****************************** items from fmt_stream_map and adaptive fmts
+    (z=>{
+        box.set('preparing items (fmt_stream_map / adaptive fmts)');
+
+        // build common source
         let src = '';
         if(ytplayer.config.args.url_encoded_fmt_stream_map) {
             src += (src ? ',' : '')+ytplayer.config.args.url_encoded_fmt_stream_map;
@@ -307,9 +307,9 @@ let videoLinks = function() {
             src += (src ? ',' : '')+ytplayer.config.args.adaptive_fmts;
         }
 
+        // build items
         if(src) {
             let map = src.split(',');
-
 
             for(let i=0; i<map.length; i++) {
                 let args = map[i].split('&');
@@ -321,50 +321,105 @@ let videoLinks = function() {
                     data[tmp[0]] = unescape(tmp[1]);
                 }
 
-                // create item
                 let item = {};
-                item.itag    = data.itag;
-                item.title   = title;
-                item.ext     = mimeToExt[data.type.split(';')[0]];
-                item.size    = data.size    ? data.size+' | '+data.quality_label+data.fps : numberResolution[data.itag];
-                item.bitrate = data.bitrate ? data.bitrate : 0;
-                item.weight  = data.clen    ? data.clen    : 0;
 
-                // item url
-                item.url  = unescape(data.url);
+                item.itag = data.itag;
 
-                // add signature, obsolete ?
+                item.quality = '-';
+                if(data.size) {
+                    item.quality = data.size+' | '+data.quality_label+data.fps;
+                }
+                else if(numberResolution[data.itag]) {
+                    item.quality = numberResolution[data.itag];
+                }
+
+                item.bitrate = data.bitrate
+                    ? data.bitrate
+                    : 0;
+
+                item.weight = data.clen
+                    ? data.clen
+                    : 0;
+
+                item.url = unescape(data.url);
+
+                // add signature
                 item.url += data && data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
                 item.url += data && data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
 
-                // add to main object
-                obj.data[item.itag] = item;
-                obj.order.push(item.itag);
+                item.ext = mimeToExt[data.type.split(';')[0]];
+
+                items.push(item);
             }
         }
+    })(items);
 
-        return obj;
-    })();
+
+    //********************************************************** items from dash
+    (z=>{
+        box.set('preparing items (dash)');
+
+        let xmlsrc = SGL.getUrl(ytplayer.config.args.dashmpd);
+
+        // get DOM from data
+        let xml = (new DOMParser()).parseFromString(xmlsrc, "application/xml");
+
+        // get infos from representations
+        let representations = xml.querySelectorAll('AdaptationSet > Representation');
+        representations.forEach(function(representation){
+
+            // parse attributes
+            let data = {};
+            for(let attr of representation.attributes) {
+                data[attr.name] = attr.value;
+            }
+
+            let item = {};
+
+            item.itag = data.id;
+
+            item.quality = '-';
+            if(data.height) {
+                item.quality = data.width+'x'+data.height+' | '+data.height+'p'+data.frameRate;
+            }
+            else if(data.audioSamplingRate) {
+                item.quality = data.audioSamplingRate+'Hz';
+            }
+
+            item.bitrate = data.bandwidth
+                ? data.bandwidth
+                : 0;
+
+            item.weight = 0;
+
+            item.url = representation.querySelector('BaseURL').textContent;
+
+            item.ext = 'mp4';
+
+            items.push(item);
+        });
+    })(items);
 
 
     //********************************************************* build links list
     let html_items = (obj=>{
+
         box.set('building links list');
+
         let str = '';
-        for(let i in obj.order) {
-            let item = obj.data[obj.order[i]];
-            if(item) {
-                str += ''
-                    +'<div>'
-                        +'<div>'+item.itag+'</div>'
-                        +'<div>'+(item.size ? item.size : '-')+'</div>'
-                        +'<div>'+(item.bitrate ? Math.round(item.bitrate/1024)+' kibps' : '-')+'</div>'
-                        +'<div>'+(item.weight ? Math.round(item.weight/1024/1024)+' mio' : '-')+'</div>'
-                        +'<div><a href="'+item.url+'">'
-                        +'youtube - '+item.title+' - fmt-'+item.itag+'.'+item.ext+'</a></div>'
-                    +'</div>';
-            }
+
+        for(let item of items) {
+            str += ''
+                +'<div>'
+                    +'<div>'+item.itag+'</div>'
+                    +'<div>'+item.quality+'</div>'
+                    +'<div>'+(item.bitrate ? Math.round(item.bitrate/1024)+' kibps' : '-')+'</div>'
+                    +'<div>'+(item.weight ? Math.round(item.weight/1024/1024)+' mio' : '-')+'</div>'
+                    +'<div><a href="'+item.url+'">'
+                        +'youtube - '+title+' - fmt-'+item.itag+'.'+item.ext+'</a></div>'
+                +'</div>';
         }
+
         return str;
     })(items);
 
@@ -373,7 +428,7 @@ let videoLinks = function() {
     box.set(''
         +'<div>'
             +'<div>fmt</div>'
-            +'<div>res</div>'
+            +'<div>quality</div>'
             +'<div>bitrate</div>'
             +'<div>size</div>'
             +'<div>'+duration+'</div>'
