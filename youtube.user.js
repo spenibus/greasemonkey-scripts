@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180917-0103
+// @version     20180917-0148
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -188,14 +188,16 @@ let videoLinks = function() {
 
 
     //***************************************************************** duration
-    let duration = (z=>{
+    let durationSec = (z=>{
         box.set('fetching duration');
+        return ytplayer.config.args.length_seconds;
+    })();
 
-        let len = ytplayer.config.args.length_seconds;
 
-        let h = Math.floor(len/3600);
-        let m = Math.floor((len%3600)/60);
-        let s = Math.floor(len%60);
+    let duration = (z=>{
+        let h = Math.floor(durationSec/3600);
+        let m = Math.floor((durationSec%3600)/60);
+        let s = Math.floor(durationSec%60);
 
         return ('0'+h).slice(-2)+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2);
     })();
@@ -325,12 +327,17 @@ let videoLinks = function() {
 
                 item.itag = data.itag;
 
-                item.quality = '-';
+                item.resolution = '-';
                 if(data.size) {
-                    item.quality = data.size+' | '+data.quality_label+data.fps;
+                    item.resolution = data.size;
                 }
                 else if(numberResolution[data.itag]) {
-                    item.quality = numberResolution[data.itag];
+                    item.resolution = numberResolution[data.itag];
+                }
+
+                item.quality = '-';
+                if(data.quality_label) {
+                    item.quality = data.quality_label+data.fps;
                 }
 
                 item.bitrate = data.bitrate
@@ -378,9 +385,14 @@ let videoLinks = function() {
 
             item.itag = data.id;
 
+            item.resolution = '-';
+            if(data.height) {
+                item.resolution = data.width+'x'+data.height;
+            }
+
             item.quality = '-';
             if(data.height) {
-                item.quality = data.width+'x'+data.height+' | '+data.height+'p'+data.frameRate;
+                item.quality = data.height+'p'+data.frameRate;
             }
             else if(data.audioSamplingRate) {
                 item.quality = data.audioSamplingRate+'Hz';
@@ -390,7 +402,7 @@ let videoLinks = function() {
                 ? data.bandwidth
                 : 0;
 
-            item.weight = 0;
+            item.weight = durationSec * item.bitrate / 8;
 
             item.url = representation.querySelector('BaseURL').textContent;
 
@@ -412,6 +424,7 @@ let videoLinks = function() {
             str += ''
                 +'<div>'
                     +'<div>'+item.itag+'</div>'
+                    +'<div>'+item.resolution+'</div>'
                     +'<div>'+item.quality+'</div>'
                     +'<div>'+(item.bitrate ? Math.round(item.bitrate/1024)+' kibps' : '-')+'</div>'
                     +'<div>'+(item.weight ? Math.round(item.weight/1024/1024)+' mio' : '-')+'</div>'
@@ -428,6 +441,7 @@ let videoLinks = function() {
     box.set(''
         +'<div>'
             +'<div>fmt</div>'
+            +'<div>resolution</div>'
             +'<div>quality</div>'
             +'<div>bitrate</div>'
             +'<div>size</div>'
