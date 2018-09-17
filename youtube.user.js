@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180917-1826
+// @version     20180917-1923
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -287,6 +287,19 @@ let videoLinks = function() {
     //************************************************** prepare items container
     let items = [];
 
+    // item model
+    function itemModel() {
+        this.itag       = 0;
+        this.resolution = '-';
+        this.quality    = '-';
+        this.bitrate    = 0;
+        this.weight     = 0;
+        this.url        = '';
+        this.ext        = '';
+        this.signed     = false;
+        this.dashWarn   = false;
+    }
+
 
     //****************************** items from fmt_stream_map and adaptive fmts
     (z=>{
@@ -315,11 +328,10 @@ let videoLinks = function() {
                     data[tmp[0]] = unescape(tmp[1]);
                 }
 
-                let item = {};
+                let item = new itemModel;
 
                 item.itag = data.itag;
 
-                item.resolution = '-';
                 if(data.size) {
                     item.resolution = data.size;
                 }
@@ -327,24 +339,26 @@ let videoLinks = function() {
                     item.resolution = numberResolution[data.itag];
                 }
 
-                item.quality = '-';
                 if(data.quality_label) {
                     item.quality = data.quality_label+data.fps;
                 }
 
-                item.bitrate = data.bitrate
-                    ? data.bitrate
-                    : 0;
+                if(data.bitrate) {
+                    item.bitrate =  data.bitrate;
+                }
 
-                item.weight = data.clen
-                    ? data.clen
-                    : 0;
+                if(data.clen) {
+                    item.weight =  data.clen;
+                }
 
                 item.url = unescape(data.url);
 
                 // add signature
-                item.url += data && data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
-                item.url += data && data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
+                if(data.s || data.sig) {
+                    item.signed = true;
+                    item.url += data && data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
+                    item.url += data && data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
+                }
 
                 item.ext = mimeToExt[data.type.split(';')[0]];
 
@@ -373,7 +387,15 @@ let videoLinks = function() {
                 data[attr.name] = attr.value;
             }
 
-            let item = {};
+            //let item = {};
+            let item = new itemModel;
+
+            // check init src url
+            let init = representation.querySelector('SegmentList > Initialization').getAttribute('sourceURL');
+
+            if(!init.match(/^range/)) {
+                item.dashWarn = true;
+            }
 
             item.itag = data.id;
 
@@ -413,6 +435,16 @@ let videoLinks = function() {
         let str = '';
 
         for(let item of items) {
+
+            // display flags when applicable
+            let flags = '';
+            if(item.signed) {
+                flags += ' <span class="flag signed" title="signed">&#x1F512;</span>';
+            }
+            if(item.dashWarn) {
+                flags += ' <span class="flag dashWarn" title="dash not ranged">&#x26A0;</span>';
+            }
+
             str += ''
                 +'<div>'
                     +'<div>'+item.itag+'</div>'
@@ -420,6 +452,7 @@ let videoLinks = function() {
                     +'<div>'+item.quality+'</div>'
                     +'<div>'+(item.bitrate ? Math.round(item.bitrate/1024)+' kibps' : '-')+'</div>'
                     +'<div>'+(item.weight ? Math.round(item.weight/1024/1024)+' mio' : '-')+'</div>'
+                    +'<div>'+flags+'</div>'
                     +'<div><a href="'+item.url+'">'
                         +'youtube - '+title+' - fmt-'+item.itag+'.'+item.ext+'</a></div>'
                 +'</div>';
@@ -437,6 +470,7 @@ let videoLinks = function() {
             +'<div>quality</div>'
             +'<div>bitrate</div>'
             +'<div>size</div>'
+            +'<div>flags</div>'
             +'<div>'+duration+'</div>'
         +'</div>'
         +html_items
