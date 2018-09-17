@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180917-0148
+// @version     20180917-1826
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -137,11 +137,7 @@ let videoLinks = function() {
     // get the real function from source
     (z=>{
         // get assets source
-        let content = GM_xmlhttpRequest({
-            method:      "GET",
-            url:         ytplayer.config.assets.js,
-            synchronous: true,
-        }).responseText;
+        let content = SGL.getUrl(ytplayer.config.assets.js);
 
         // move vars declaration outside IIFE so we can access them
         let m = content.match(/{var window=this;(var [\s\S]*?;)/)
@@ -213,14 +209,10 @@ let videoLinks = function() {
             return pub;
         }
 
-        let str = GM_xmlhttpRequest({
-            method:      "GET",
-            url:         'https://www.youtube.com/list_ajax?style=json&action_get_templist=1&video_ids='+videoId,
-            synchronous: true,
-        });
+        let str = SGL.getUrl('https://www.youtube.com/list_ajax?style=json&action_get_templist=1&video_ids='+videoId);
 
         pub.date = JSON.parse(
-            str.responseText || '{ "video" : [ { "time_created" : 0 } ] }'
+            str || '{ "video" : [ { "time_created" : 0 } ] }'
         ).video[0].time_created;
 
         pub.date = pub.date > 0
