@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20180917-1923
+// @version     20181118-1754
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -98,8 +98,9 @@ let videoLinks = function() {
         :hover > #spenibus_videoLinks > div > div ~ div {\
             display:table-cell;\
         }\
-    ');
-    let box = SGL.displayBox('spenibus_videoLinks');
+    ');                     
+    let boxMsg = SGL.displayBox('spenibus_GmYtMsg');
+    let box    = SGL.displayBox('spenibus_videoLinks');
 
 
     /*
@@ -174,6 +175,10 @@ let videoLinks = function() {
             return f.apply(this, arguments);
         }
     })();
+    
+    if(sigDecode() === 'nosig') {
+         boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
+    }
 
 
     //***************************************************************** video id
