@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20181118-1754
+// @version     20181118-2043
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -98,7 +98,7 @@ let videoLinks = function() {
         :hover > #spenibus_videoLinks > div > div ~ div {\
             display:table-cell;\
         }\
-    ');                     
+    ');
     let boxMsg = SGL.displayBox('spenibus_GmYtMsg');
     let box    = SGL.displayBox('spenibus_videoLinks');
 
@@ -135,50 +135,74 @@ let videoLinks = function() {
     let sigDecode = function(){ return 'nosig'; };
 
 
-    // get the real function from source
+    // get the real decipher function from source
     (z=>{
         // get assets source
-        let content = SGL.getUrl(ytplayer.config.assets.js);
+        let _content = SGL.getUrl(ytplayer.config.assets.js);
 
         // move vars declaration outside IIFE so we can access them
-        let m = content.match(/{var window=this;(var [\s\S]*?;)/)
-        if(!m){
+        let _m = _content.match(/{var window=this;(var [\s\S]*?;)/)
+        if(!_m){
             return;
         }
-        let varsDeclaration = m[1];
-        content = varsDeclaration + content.replace(varsDeclaration, '');
+
+        let _varsDeclaration = _m[1];
+        _content = _varsDeclaration + _content.replace(_varsDeclaration, '');
 
         // eval the code to access the vars in this scope
-        eval(content);
+        eval(_content);
 
-        // get decipher function name
-        // 2018-09-08 00:51 utc
-        // https://github.com/rg3/youtube-dl/commit/9a47fa35dd9dd2d53f4d3f088811ea29295991e5
-        // https://www.youtube.com/yts/jsbin/player-vflvABTsY/en_US/base.js:2653
-        // a.match(/https:\/\/yt.akamaized.net/)||d.set("alr","yes");c&&d.set(b,IK(c));return d};
+        /*
+        get decipher function name
+        2018-11-18
+        new strategy, bruteforce the fucker
+        get all functions that take a single arg and use split/join internally,
+        then test them to see if they return something looking like a valid sig
+        */
+        let _re       = /\n(\w+)=function\(\w\)[^\n]*split[^\n]*join.*\n/g;
+        let _test     = '';
+        let _cmd      = '';
+        let _sigSrc   = '6FEFBF811C7A8D7B1FEB111B8F2CA9463C41A051D106.8569D2B37D2A6364424D5E3A28BA127AE183FB7A';
+        let _funcName = '';
 
-        m = (
-            /\|\|([\$\w]+)\.set\("alr","yes"\);([\$\w]+)+&&([\$\w]+).set\(([\$\w]+),([\$\w]+)/i
-        ).exec(content);
+        while(_m = _re.exec(_content)) {
 
-        if(!m){
+            // test the function
+            _cmd = '_test = '+_m[1]+'("'+_sigSrc+'");';
+
+            try{
+                eval(_cmd);
+            }catch(_e){}
+
+            // validate output
+            if(
+                // is a string
+                typeof _test === 'string'
+                // is different from the source sig
+                && _test !== _sigSrc
+                // matches the sig format
+                && _test.match(/[A-Z\d]+\.[A-Z\d]+/)
+            ) {
+                // got it
+                _funcName = _m[1];
+                break;
+            }
+        }
+
+        // found nothing
+        if(_funcName === ''){
+            boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
             return;
         }
 
-        let funcName = m[5];
-
         // bind function to a usable local name
-        eval('var f = ' + funcName);
+        eval('var _f = ' + _funcName);
 
         // finalize export
         sigDecode = function(){
-            return f.apply(this, arguments);
+            return _f.apply(this, arguments);
         }
     })();
-    
-    if(sigDecode() === 'nosig') {
-         boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
-    }
 
 
     //***************************************************************** video id
