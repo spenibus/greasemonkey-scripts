@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20181118-2043
+// @version     20190403-2101
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -25,14 +25,31 @@ let loc = document.location;
 
 
 
-/*******************************************************************************
-********************************************************************************
-********************************************************************************
-******************************************* run stuff on custom yt load event */
+//*********************************************************** group stuff to run
+let run = function() {
+    videoLinks();
+    proxLinks();
+}
+
+
+//***************************************************** add manual reload button
+{
+    let box = SGL.displayBox('spenibus_reload');
+
+    let btn       = document.createElement('button');
+    btn.type      = 'button';
+    btn.innerHTML = 'R';
+    btn.title     = 'Reload';
+    btn.addEventListener('click', z=>{run();});
+
+    box.node.appendChild(btn);
+}
+
+
+//*********************************************** attach to custom yt load event
 SGL.onReady(z=>{
     document.addEventListener('yt-page-data-updated', z=>{
-        videoLinks();
-        proxLinks();
+        run();
     });
 });
 
