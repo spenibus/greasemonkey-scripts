@@ -1,9 +1,9 @@
-// ==UserScript==
+﻿// ==UserScript==
 // @name        twitch
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20180804-1931
+// @version     20190404-1814
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -12,14 +12,14 @@
 
 
 
-/***************************************************************** shorthands */
+//******************************************************************* shorthands
 var SGL = spenibus_greasemonkey_lib;
 var loc = document.location;
 
 
 
 
-/********************************************************************* config */
+//*********************************************************************** config
 var cfg = {
     currentUrl : null,
     // web player client id
@@ -89,7 +89,21 @@ function getUrl(url, handler=null) {
 
 
 
-/*********************************************************** get channel name */
+//******************************************************** custom create element
+function newElem(name='', params={}) {
+    let elem = document.createElement(name);
+
+    for(let key in params) {
+        elem[key] = params[key];
+    }
+
+    return elem;
+}
+
+
+
+
+//************************************************************* get channel name
 function getChannel() {
 
     var m;
@@ -112,7 +126,7 @@ function getChannel() {
 
 
 
-/******************************************************** m3u metadata parser */
+//********************************************************** m3u metadata parser
 // https://tools.ietf.org/html/draft-pantos-http-live-streaming-07
 // 3.2.  Attribute Lists
 function metaParse(str) {
@@ -145,7 +159,7 @@ function metaParse(str) {
 
 
 
-/***************************************************************** m3u parser */
+//******************************************************************* m3u parser
 function playlistParse(str) {
 
     // no carriage returns
@@ -354,10 +368,11 @@ function live() {
             'mobile' : '226p',
         },
         playlistUrl  : '',
-        playlistHtml : '',
+        playlistHtml : newElem('div', {
+            className : 'playlist',
+        }),
         streams      : {},
     };
-
 
     // create container
     var box = SGL.displayBox('spenibusLiveLinkBox');
@@ -497,7 +512,7 @@ function live() {
     }
 
 
-    //************************************************************* token handler
+    //************************************************************ token handler
     function tokenHandler(xhr) {
 
         var token = JSON.parse(xhr.responseText);
@@ -529,7 +544,7 @@ function live() {
     }
 
 
-    //********************************************************** playlist handler
+    //********************************************************* playlist handler
     function playlistHandler(xhr) {
 
         var playlist = xhr.responseText;
@@ -580,14 +595,20 @@ function live() {
     }
 
 
-    //*********************************************************** streams handler
+    //********************************************************** streams handler
     function streamsHandler() {
 
         //box.set('processing streams');
         livePresent('processing streams');
 
-        // init buffer
-        var html = '';
+        // reset playlist container
+        vars.playlistHtml.innerHTML = ''
+            +'<div>'
+                +'<div><a href="'+vars.playlistUrl+'">cfg</a></div>'
+                +'<div>resolution</div>'
+                +'<div>bitrate</div>'
+                +'<div>msg</div>'
+            +'</div>'
 
         for(var i in vars.streams) {
 
@@ -599,24 +620,27 @@ function live() {
                 resolution = vars.quality[i];
             }
 
-            html += ''
-                +'<div>'
-                    +'<a href="'+vars.streams[i].URL+'">'+i+'</a>'
-                    +'<div>'+resolution+'</div>'
-                    +'<div>'+Math.round(vars.streams[i].BANDWIDTH/1024)+' kibps</div>'
-                +'</div>';
-        }
+            let row = document.createElement('div');
 
-        // finalize
-        vars.playlistHtml = ''
-            +'<div class="playlist">'
-                +'<div>'
-                    +'<div><a href="'+vars.playlistUrl+'">cfg</a></div>'
-                    +'<div>resolution</div>'
-                    +'<div>bitrate</div>'
-                +'</div>'
-                +html
-            +'</div>'
+            row.innerHTML = ''
+                +'<a href="'+vars.streams[i].URL+'">'+i+'</a>'
+                +'<div>'+resolution+'</div>'
+                +'<div>'+Math.round(vars.streams[i].BANDWIDTH/1024)+' kibps</div>';
+
+            let msgElem = newElem('div', {
+                innerHTML : 'n/a',
+            });
+            row.appendChild(msgElem);
+
+            // check stream for ads
+            getUrl(vars.streams[i].URL, xhr=>{
+                if(xhr.response.match(/TWITCH\-AD/i)) {
+                    msgElem.innerHTML = '<span style="color:red;">ads</span>';
+                }
+            });
+
+            vars.playlistHtml.appendChild(row);
+        }
 
         // present
         livePresent();
@@ -632,8 +656,8 @@ function live() {
                 +'<div>'+vars.viewers+' viewers</div>'
                 +'<div>'+(msg ? msg : '')+'</div>'
             +'</div>'
-            +vars.playlistHtml
         );
+        box.node.appendChild(vars.playlistHtml);
     }
 }
 window.addEventListener('DOMContentLoaded', live, false);
@@ -813,7 +837,7 @@ function archives() {
 
         // store urls
         data.infoUrl  = 'https://api.twitch.tv/kraken/videos/'+data.archiveId;
-        
+
         // fetch info
         getUrl(
             data.infoUrl
