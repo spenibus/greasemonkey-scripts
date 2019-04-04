@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20190403-2101
+// @version     20190404-2135
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -34,6 +34,11 @@ let run = function() {
 
 //***************************************************** add manual reload button
 {
+    // not watch page, abort
+    if(loc.pathname != '/watch') {
+        return;
+    }
+
     let box = SGL.displayBox('spenibus_reload');
 
     let btn       = document.createElement('button');
