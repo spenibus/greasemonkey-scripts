@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20190424-1954
+// @version     20190429-0044
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -134,9 +134,13 @@ let videoLinks = function() {
     let ytplayer = {};
     (z=>{
         let node = unsafeWindow.document.getElementById('page-manager');
-        ytplayer.config = node && node.__data && node.__data.data.player
-            ? node.__data.data.player
-            : unsafeWindow.window.ytplayer.config;
+        ytplayer.config =
+            node
+            && node.__data__
+            && node.__data__.data
+            && node.__data__.data.player
+                ? node.__data__.data.player
+                : unsafeWindow.window.ytplayer.config;
     })();
 
 
