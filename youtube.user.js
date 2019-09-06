@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20190906.2311
+// @version     20190906.2316
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -521,7 +521,7 @@ let videoLinks = function() {
         });
     })(items);
 
-                                console.log(items);
+
     //********************************************************* build links list
     let html_items = (obj=>{
 
