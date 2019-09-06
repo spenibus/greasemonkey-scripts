@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20190429-0044
+// @version     20190906.2311
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -185,7 +185,8 @@ let videoLinks = function() {
         get all functions that take a single arg and use split/join internally,
         then test them to see if they return something looking like a valid sig
         */
-        let _re       = /\n(\w+)=function\(\w\)[^\n]*split[^\n]*join.*\n/g;
+        let _re       = /\n(\w+)=function\(\w\)[^\n]*(split|join).*\n/g;
+        //let _re       = /\n(\w+)=function\(\w\).*?\n/g;
         let _test     = '';
         let _cmd      = '';
         let _sigSrc   = '6FEFBF811C7A8D7B1FEB111B8F2CA9463C41A051D106.8569D2B37D2A6364424D5E3A28BA127AE183FB7A';
@@ -207,7 +208,7 @@ let videoLinks = function() {
                 // is different from the source sig
                 && _test !== _sigSrc
                 // matches the sig format
-                && _test.match(/[A-Z\d]+\.[A-Z\d]+/)
+                && _test.match(/^[A-Z\d]{35,43}\.[A-Z\d]{35,43}$/)
             ) {
                 // got it
                 _funcName = _m[1];
@@ -235,6 +236,41 @@ let videoLinks = function() {
     let videoId = (z=>{
         box.set('fetching video id');
         return ytplayer.config.args.video_id;
+    })();
+
+
+
+
+    // test
+
+    // get updated config
+    let freshConfig = (z=>{
+
+        //console.log('loading fresh config');
+
+        let c = SGL.getUrl('https://www.youtube.com/watch?v='+videoId);
+
+        // get DOM from data
+        let d = (new DOMParser()).parseFromString(c, "text/html");
+
+        let ss = d.querySelectorAll('script:not([src])')
+
+        for(let s of ss) {
+            if(s.innerHTML.match(/var\s*ytplayer/)) {
+
+                let t = s.innerHTML;
+                t = t.replace(/var(\s*ytplayer)/, '$1');
+                t = t.replace(/ytplayer/g, '_fresh');
+                t = '{'+t+'}';
+
+                let _fresh;
+                eval(t);
+
+                //console.log(_fresh.config);
+
+                return _fresh.config.args;
+            }
+        }
     })();
 
 
@@ -316,7 +352,7 @@ let videoLinks = function() {
         'video/x-flv' : 'flv',
         'video/3gpp'  : '3gp',
         'audio/mp4'   : 'm4a',
-        'audio/webm'  : 'ogg',
+        'audio/webm'  : 'webm',
     };
 
 
@@ -324,7 +360,9 @@ let videoLinks = function() {
     let numberResolution = (z=>{
         box.set('building numRes');
 
-        let list = ytplayer.config.args.fmt_list;
+        //let list = ytplayer.config.args.fmt_list;
+        let list = freshConfig.fmt_list;
+
         if(!list) {
             return;
         }
@@ -362,10 +400,12 @@ let videoLinks = function() {
 
         // build common source
         let src = '';
-        if(ytplayer.config.args.url_encoded_fmt_stream_map) {
+        //if(ytplayer.config.args.url_encoded_fmt_stream_map) {
+        if(freshConfig.url_encoded_fmt_stream_map) {
             src += (src ? ',' : '')+ytplayer.config.args.url_encoded_fmt_stream_map;
         }
-        if(ytplayer.config.args.adaptive_fmts) {
+        //if(ytplayer.config.args.adaptive_fmts) {
+        if(freshConfig.adaptive_fmts) {
             src += (src ? ',' : '')+ytplayer.config.args.adaptive_fmts;
         }
 
@@ -411,8 +451,8 @@ let videoLinks = function() {
                 // add signature
                 if(data.s || data.sig) {
                     item.signed = true;
-                    item.url += data && data.s   ? '&signature='+encodeURIComponent(sigDecode(data.s)) : '';
-                    item.url += data && data.sig ? '&signature='+encodeURIComponent(data.sig)          : '';
+                    item.url += data && data.s   ? '&sig='+encodeURIComponent(sigDecode(data.s)) : '';
+                    item.url += data && data.sig ? '&sig='+encodeURIComponent(data.sig)          : '';
                 }
 
                 item.ext = mimeToExt[data.type.split(';')[0]];
@@ -481,7 +521,7 @@ let videoLinks = function() {
         });
     })(items);
 
-
+                                console.log(items);
     //********************************************************* build links list
     let html_items = (obj=>{
 
