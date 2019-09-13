@@ -1,6 +1,5 @@
 /*******************************************************************************
 spenibus greasemonkey lib
-version: 20180223-2205
 *******************************************************************************/
 
 
@@ -19,7 +18,7 @@ spenibus_greasemonkey_lib = {
 
 
     // lib version
-    version : 20170319.2354,
+    version : 20190913.2249,
     cfg : {
         displayBoxContainerId : 'spenibus_display_box_container',
         genericBoxClass       : 'spenibus_generic_box',
@@ -344,11 +343,11 @@ spenibus_greasemonkey_lib = {
         callback  : function
         singleUse : bool
     ***/
-    onEvent: function(eventList, callback, singleUse=true) {
+    onEvent: function(eventList, callback, singleUse=false) {
         eventList.forEach(function(eventName){
             let f = function() {
                 if(singleUse) {
-                    window.removeEventListener(eventName, f);
+                    window.removeEventListener(eventName, f, true);
                 }
                 callback.apply(this, arguments);
             }
