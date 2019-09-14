@@ -5,7 +5,7 @@ spenibus greasemonkey lib
 
 
 
-spenibus_greasemonkey_lib = {
+var spenibus_greasemonkey_lib = {
 
 
 
@@ -18,7 +18,7 @@ spenibus_greasemonkey_lib = {
 
 
     // lib version
-    version : 20190913.2249,
+    version : 20190914.2246,
     cfg : {
         displayBoxContainerId : 'spenibus_display_box_container',
         genericBoxClass       : 'spenibus_generic_box',
@@ -338,21 +338,67 @@ spenibus_greasemonkey_lib = {
 
 
     /***
-    run callback function on one or more events, once or forever
-        eventList : array
-        callback  : function
-        singleUse : bool
+    run callback function on one or more events
+        eventList              : array    / list of events
+        callback               : function / callback to use when an event is triggered
+        singleUse              : bool     / trigger the callback only once
+        requireAll             : bool     / trigger the callback only after each event has happened at least once
     ***/
-    onEvent: function(eventList, callback, singleUse=false) {
-        eventList.forEach(function(eventName){
-            let f = function() {
-                if(singleUse) {
-                    window.removeEventListener(eventName, f, true);
-                }
-                callback.apply(this, arguments);
+    onEvent: function(
+        eventList   = []
+        ,callback   = e => {return 0;}
+        ,singleUse  = false
+        ,requireAll = false
+    ) {
+
+        let instance = {};
+
+        instance.stop = function() {
+            eventList.forEach(eventName=>{
+                window.removeEventListener(eventName, instance.callback, true);
+            });
+        }
+
+        instance.eventCount = {};
+
+        // set event counter at zero for each event
+        instance.countReset = function() {
+            eventList.forEach(eventName=>{
+                instance.eventCount[eventName] = 0;
+            });
+        };
+
+        // check if each event has happened at least once
+        instance.countReady = function() {
+            return Math.min(...Object.values(instance.eventCount)) > 0 ? true : false;
+        };
+
+        // callback wrapper
+        instance.callback = function(e) {
+
+            // count the event
+            ++(instance.eventCount[e.type]);
+
+            // stop if all events required have not happened
+            if(requireAll && !instance.countReady()) {
+                return 0;
             }
-            window.addEventListener(eventName, f, true);
+
+            // stop after first call
+            if(singleUse) {
+                instance.stop();
+            }
+
+            instance.countReset();
+            callback.apply(this, arguments);
+        };
+
+        instance.countReset();
+        eventList.forEach(eventName=>{
+            window.addEventListener(eventName, instance.callback, true);
         });
+
+        return instance;
     },
 
 
@@ -488,6 +534,25 @@ spenibus_greasemonkey_lib = {
             'begin' : f_start,
             'end' : f_stop,
         };
+    },
+
+
+
+
+    /***
+    fire event
+        eventName (array) one or more names of events to be fired
+    ***/
+    //******************************************************************************
+    fireEvent : function(eventNames){
+
+        if(typeof eventNames === 'string') {
+            eventNames = [eventNames];
+        }
+
+        eventNames.forEach(eventName=>{
+            let z = dispatchEvent(new Event(eventName));
+        });
     },
 
 
@@ -672,6 +737,36 @@ spenibus_greasemonkey_lib = {
                 delayedRun = true;
             }
         }
+    },
+
+
+
+
+    /***
+    quickly get a nested prop without triggering an exception
+        target (object)       base object
+        path   (string|array) path to property, separate with dots when using a string
+                for target.books[0].title, use either:
+                    string: 'books.0.title'
+                     array: ['books',0,'title']
+    ***/
+    getDeepProp : function(target, path){
+
+        if(typeof path === 'string') {
+            path = path.split('.');
+        }
+
+        let prop = target;
+
+        for(let key of path) {
+
+            if(!prop) {
+                break;
+            }
+
+            prop = prop[key];
+        }
+        return prop;
     },
 };
 
