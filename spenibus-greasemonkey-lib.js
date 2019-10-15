@@ -18,7 +18,7 @@ var spenibus_greasemonkey_lib = {
 
 
     // lib version
-    version : 20190914.2246,
+    version : 20191015.2011,
     cfg : {
         displayBoxContainerId : 'spenibus_display_box_container',
         genericBoxClass       : 'spenibus_generic_box',
@@ -692,10 +692,10 @@ var spenibus_greasemonkey_lib = {
     execLimit : function(callback, timeout) {
 
         // flags
-        wait       = false;
-        delayedRun = false;
-        callback   = callback;
-        timeout    = timeout;
+        let _wait       = false;
+        let _delayedRun = false;
+        let _callback   = callback;
+        let _timeout    = timeout;
 
         // return callback wrapper
         return function() {
@@ -704,37 +704,37 @@ var spenibus_greasemonkey_lib = {
             //args = arguments;
 
             // idle
-            if(!wait) {
+            if(!_wait) {
 
                 // activate wait flag
-                wait = true;
+                _wait = true;
 
                 //schedule a timeout
                 setTimeout(function() {
 
                     // delayed run active
-                    if(delayedRun) {
+                    if(_delayedRun) {
 
                         // run callback
                         callback.apply(this, arguments);
 
                         // reset delayed flag
-                        delayedRun = false;
+                        _delayedRun = false;
                     }
 
                     // reset wait flag
-                    wait = false;
-                }, timeout);
+                    _wait = false;
+                }, _timeout);
 
                 // run callback
                 callback.apply(this, arguments);
             }
 
             // currently in wait state but no delayed run is scheduled
-            else if(!delayedRun) {
+            else if(!_delayedRun) {
 
                 // schedule a delayed run
-                delayedRun = true;
+                _delayedRun = true;
             }
         }
     },
