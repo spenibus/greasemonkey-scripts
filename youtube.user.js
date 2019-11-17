@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20190914.2317
+// @version     20191117.1655
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -286,9 +286,10 @@ function videoLinks() {
                 }
             }
 
-            data.sigDecode('') == 'nosig'
-                ? boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>')
-                : SGL.fireEvent('sigDecodeReady');
+            if(data.sigDecode('') == 'nosig') {
+                boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
+            }
+            SGL.fireEvent('sigDecodeReady');
         });
     };
 
