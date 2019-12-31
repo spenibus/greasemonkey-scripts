@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20191117.1655
+// @version     20191231.1959
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -252,23 +252,90 @@ function videoLinks() {
                 eval(cmd);
             }catch(e){}
 
-            let sigSrc = '6FEFBF811C7A8D7B1FEB111B8F2CA9463C41A051D106.8569D2B37D2A6364424D5E3A28BA127AE183FB7A';
+            //let sigSrc = '6FEFBF811C7A8D7B1FEB111B8F2CA9463C41A051D106.8569D2B37D2A6364424D5E3A28BA127AE183FB7A';
+            let sigSrc = 'BooBBSLC9PTQNv3HIUChcI4ltUoMtygYUgbi2KwMjHF6GICwuKeDXR2EiFBm332iBnpOA6RZd_iyDOt_Q5kkJgqAKVgIARww2IxgLALA';
+
+            let output;
+            let sigDecodePending = true;
 
             let vk = Object.keys(vs);
             for(let v of vk) {
+
                 let f = vs[v];
 
-                // not what we want
-                if(!f || f.length != 1 || !f.toString().match(/(split|join).*(split|join)/)) {
-                    continue;
+                // get ciphered formats
+                if(
+                    f
+                    && f.toString().match(/cipher/)
+                ) {
+                    // test the func
+                    let items = {};
+                    try{
+                        f(
+                            items,
+                            data.ytplayer.config.args.player_response.streamingData,
+                            {}
+                        );
+                    }catch(e){}
+
+                    // parse
+                    let list = [];
+                    for(let k in items) {
+                        if(items[k].match(/itag/)) {
+                            list = list.concat(items[k].split(','));
+                        }
+                    }
+
+                    data.streamingData = [];
+                    list.forEach(item=>{
+                        //console.log(item);
+                        let args = {};
+                        item.split('&').forEach(arg=>{
+                            let tmp = arg.split('=');
+                            args[tmp[0]] = unescape(tmp[1]);
+                        });
+
+                        data.streamingData.push(args);
+                    });
                 }
 
-                // test the func
-                let output;
-                try{
-                    output = f(sigSrc);
-                }catch(e){}
 
+                // get sigDecode
+                if(
+                    sigDecodePending
+                    && f
+                    //&& f.length == 1
+                    //&& !f.toString().match(/(split|join).*(split|join)/)
+                ) {
+
+                    // test the func
+                    try{
+                        output = f(sigSrc);
+                    }catch(e){}
+
+                    // validate output
+                    if(
+                        // is a string
+                        typeof output === 'string'
+                        // is different from the source sig and does not contain it
+                        && !output != sigSrc
+                        && output.indexOf(sigSrc) == -1
+                        // matches the sig format
+                        && output.match(/^.{90,110}$/)
+                        //&& output.match(/^[A-Z\d]{30,50}\.[A-Z\d]{30,50}$/)
+                    ) {
+                        //console.log(output);
+                        // got it, export
+                        data.sigDecode = function(){
+                            return f.apply(this, arguments);
+                        };
+                        sigDecodePending = false;
+                    }
+                }
+
+
+
+/**
                 // validate output
                 if(
                     // is a string
@@ -276,7 +343,8 @@ function videoLinks() {
                     // is different from the source sig
                     && output !== sigSrc
                     // matches the sig format
-                    && output.match(/^[A-Z\d]{30,50}\.[A-Z\d]{30,50}$/)
+                    && output.match(/^.{90,110}$/)
+                    //&& output.match(/^[A-Z\d]{30,50}\.[A-Z\d]{30,50}$/)
                 ) {
                     // got it, export
                     data.sigDecode = function(){
@@ -284,10 +352,17 @@ function videoLinks() {
                     };
                     break;
                 }
+/**/
             }
 
+            console.log(data.streamingData);
+
             if(data.sigDecode('') == 'nosig') {
-                boxMsg.set('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
+                boxMsg.append('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
+            }
+
+            if(data.streamingData.length == 0) {
+                boxMsg.append('<span style="color:#F00" title="urls not decoded">&#x26A0;</span>');
             }
             SGL.fireEvent('sigDecodeReady');
         });
@@ -381,15 +456,15 @@ function videoLinks() {
         box.set('Building itag resolutions');
 
         let tmp = SGL.getDeepProp(data, 'ytplayer.config.args.fmt_list');
+        //console.log(data);
 
         if(tmp) {
             tmp.split(',').forEach(item=>{
                 let bits = item.split('/');
                 data.itagResolution[bits[0]] =  bits[1];
             });
-
-            SGL.fireEvent('itagResolutionReady');
         }
+        SGL.fireEvent('itagResolutionReady');
     };
 
 
@@ -411,11 +486,92 @@ function videoLinks() {
         }
 
         // build a common source for items from fmt_stream_map and adaptive fmts
+        /**
         src = ''
             +','+SGL.getDeepProp(data, 'ytplayer.config.args.url_encoded_fmt_stream_map')
             +','+SGL.getDeepProp(data, 'ytplayer.config.args.adaptive_fmts')
         ;
+        /**/
 
+        let items = [];
+
+        if(data.streamingData) {
+            items = data.streamingData;
+        }
+        else {
+            items = Array.concat(
+                SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats')
+                ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats')
+            );
+        }
+
+        //console.log(items);
+
+        items.forEach(src=>{
+
+            let item = new itemModel;
+
+            if(src.itag) {
+                item.itag = src.itag;
+            }
+
+            if(src.width && src.height) {
+                item.resolution = src.width+'x'+src.height;
+            }
+
+            if(src.qualityLabel) {
+                item.quality = src.qualityLabel;
+            }
+
+            if(src.fps) {
+                item.quality += src.fps;
+            }
+
+            if(src.bitrate) {
+                item.bitrate = src.bitrate
+            }
+
+            if(src.contentLength) {
+                item.weight = src.contentLength;
+            }
+
+            item.url = src.url;
+            //item.url += '&rbuf=524288';
+            item.url += '&rbuf=4194304';
+
+
+            // add signature
+            if(src.s) {
+                item.signed = true;
+
+                /**
+                let args = {};
+                src.cipher.split('&').forEach(arg=>{
+                    let tmp = arg.split('=');
+                    args[tmp[0]] = unescape(tmp[1]);
+                });
+                /**/
+
+                //console.log(args);
+
+                item.url = src.url
+                    + '&' + (src.sp || 'sig')
+                    + '=' +  encodeURIComponent(data.sigDecode(src.s));
+                    //+ '&' + encodeURIComponent(data.sigDecode(args.s));
+            }
+
+            if(src.mimeType) {
+                item.ext = data.mimeToExt[src.mimeType.split(';')[0]];
+            }
+            else if(src.type) {
+                item.ext = data.mimeToExt[src.type.split(';')[0]];
+            }
+
+            data.items.push(item);
+        });
+
+
+        /**
         // build items
         if(!src) {
             box.set('itemsBuild: empty source');
@@ -471,7 +627,7 @@ function videoLinks() {
 
             data.items.push(item);
         });
-
+        /**/
         SGL.fireEvent('itemsReady');
     };
 
