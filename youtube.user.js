@@ -355,7 +355,7 @@ function videoLinks() {
 /**/
             }
 
-            console.log(data.streamingData);
+            //console.log(data.streamingData);
 
             if(data.sigDecode('') == 'nosig') {
                 boxMsg.append('<span style="color:#F00" title="sigDecode not found">&#x26A0;</span>');
