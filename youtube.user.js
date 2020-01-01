@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20191231.1959
+// @version     20200101.1805
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -286,7 +286,7 @@ function videoLinks() {
                         }
                     }
 
-                    data.streamingData = [];
+                    data.streamingData = {};
                     list.forEach(item=>{
                         //console.log(item);
                         let args = {};
@@ -295,7 +295,8 @@ function videoLinks() {
                             args[tmp[0]] = unescape(tmp[1]);
                         });
 
-                        data.streamingData.push(args);
+                        //data.streamingData.push(args);
+                        data.streamingData[args['itag']] = args;
                     });
                 }
 
@@ -332,27 +333,6 @@ function videoLinks() {
                         sigDecodePending = false;
                     }
                 }
-
-
-
-/**
-                // validate output
-                if(
-                    // is a string
-                    typeof output === 'string'
-                    // is different from the source sig
-                    && output !== sigSrc
-                    // matches the sig format
-                    && output.match(/^.{90,110}$/)
-                    //&& output.match(/^[A-Z\d]{30,50}\.[A-Z\d]{30,50}$/)
-                ) {
-                    // got it, export
-                    data.sigDecode = function(){
-                        return f.apply(this, arguments);
-                    };
-                    break;
-                }
-/**/
             }
 
             //console.log(data.streamingData);
@@ -486,28 +466,16 @@ function videoLinks() {
         }
 
         // build a common source for items from fmt_stream_map and adaptive fmts
-        /**
-        src = ''
-            +','+SGL.getDeepProp(data, 'ytplayer.config.args.url_encoded_fmt_stream_map')
-            +','+SGL.getDeepProp(data, 'ytplayer.config.args.adaptive_fmts')
-        ;
-        /**/
+        Array().concat(
+            SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats')
+            ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats')
+        ).forEach(item=>{
+            data.streamingData[item['itag']] = item;
+        });
 
-        let items = [];
+        //console.log(data.streamingData);
 
-        if(data.streamingData) {
-            items = data.streamingData;
-        }
-        else {
-            items = Array.concat(
-                SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats')
-                ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats')
-            );
-        }
-
-        //console.log(items);
-
-        items.forEach(src=>{
+        Object.values(data.streamingData).forEach(src=>{
 
             let item = new itemModel;
 
@@ -536,7 +504,6 @@ function videoLinks() {
             }
 
             item.url = src.url;
-            //item.url += '&rbuf=524288';
             item.url += '&rbuf=4194304';
 
 
@@ -544,20 +511,9 @@ function videoLinks() {
             if(src.s) {
                 item.signed = true;
 
-                /**
-                let args = {};
-                src.cipher.split('&').forEach(arg=>{
-                    let tmp = arg.split('=');
-                    args[tmp[0]] = unescape(tmp[1]);
-                });
-                /**/
-
-                //console.log(args);
-
                 item.url = src.url
                     + '&' + (src.sp || 'sig')
                     + '=' +  encodeURIComponent(data.sigDecode(src.s));
-                    //+ '&' + encodeURIComponent(data.sigDecode(args.s));
             }
 
             if(src.mimeType) {
@@ -570,64 +526,6 @@ function videoLinks() {
             data.items.push(item);
         });
 
-
-        /**
-        // build items
-        if(!src) {
-            box.set('itemsBuild: empty source');
-            return 0;
-        }
-
-
-        src.split(',').forEach(str=>{
-
-            if(!str) {
-                return 0;
-            }
-
-            let args = {};
-
-            str.split('&').forEach(arg=>{
-                let tmp = arg.split('=');
-                args[tmp[0]] = unescape(tmp[1]);
-            });
-
-            let item = new itemModel;
-
-            item.itag = args.itag;
-
-            if(args.size) {
-                item.resolution = args.size;
-            }
-            else if(data.itagResolution[args.itag]) {
-                item.resolution = data.itagResolution[args.itag];
-            }
-
-            if(args.quality_label) {
-                item.quality = args.quality_label + args.fps;
-            }
-
-            if(args.bitrate) {
-                item.bitrate = args.bitrate;
-            }
-
-            if(args.clen) {
-                item.weight = args.clen;
-            }
-
-            item.url = unescape(args.url);
-
-            // add signature
-            if(args.s) {
-                item.signed = true;
-                item.url += '&'+(args.sp || 'sig')+'='+encodeURIComponent(data.sigDecode(args.s));
-            }
-
-            item.ext = data.mimeToExt[args.type.split(';')[0]];
-
-            data.items.push(item);
-        });
-        /**/
         SGL.fireEvent('itemsReady');
     };
 
