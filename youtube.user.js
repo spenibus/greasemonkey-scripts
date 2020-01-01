@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20200101.1805
+// @version     20200101.1816
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -470,7 +470,9 @@ function videoLinks() {
             SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats')
             ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats')
         ).forEach(item=>{
-            data.streamingData[item['itag']] = item;
+            data.streamingData[item['itag']]
+                ? data.streamingData[item['itag']] = {...data.streamingData[item['itag']], ...item}
+                : data.streamingData[item['itag']] = item;
         });
 
         //console.log(data.streamingData);
