@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20200101.1816
+// @version     20200101.1838
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -505,9 +505,12 @@ function videoLinks() {
                 item.weight = src.contentLength;
             }
 
+            item.audioChannels = src.audioChannels
+                ? src.audioChannels
+                : 0;
+
             item.url = src.url;
             item.url += '&rbuf=4194304';
-
 
             // add signature
             if(src.s) {
@@ -547,10 +550,15 @@ function videoLinks() {
                 flags += ' <span class="flag dashWarn" title="dash not ranged">&#x26A0;</span>';
             }
 
+            let audio = item.audioChannels > 0
+                ? ' <span class="audio" title="has audio">&#x1F508;</span>'
+                : ' <span class="audio mute" title="no audio">&#x1F507;</span>';
+
             data.html += ''
                 +'<div>'
                     +'<div>'+item.itag+'</div>'
                     +'<div>'+item.resolution+'</div>'
+                    +'<div>'+audio+'</div>'
                     +'<div>'+item.quality+'</div>'
                     +'<div>'+(item.bitrate ? Math.round(item.bitrate/1024)+' kibps' : '-')+'</div>'
                     +'<div>'+(item.weight ? Math.round(item.weight/1024/1024)+' mio' : '-')+'</div>'
@@ -564,6 +572,7 @@ function videoLinks() {
             +'<div>'
                 +'<div>fmt</div>'
                 +'<div>resolution</div>'
+                +'<div>audio ch.</div>'
                 +'<div>quality</div>'
                 +'<div>bitrate</div>'
                 +'<div>size</div>'
