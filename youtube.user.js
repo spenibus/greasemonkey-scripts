@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20200101.1838
+// @version     20200104.2019
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -84,13 +84,22 @@ function videoLinks() {
             white-space:nowrap;\
             text-align:right;\
         }\
+        #spenibus_GmYtLog {\
+            display:none;\
+        }\
+        :hover > #spenibus_GmYtLog {\
+            display:block;\
+        }\
         #spenibus_videoLinks > div > div a {\
             text-decoration:none;\
             color:#00F;\
             display:block;\
         }\
-        #spenibus_videoLinks > div > div a:hover {\
+        #spenibus_videoLinks > div:hover {\
             background-color:rgba(0,255,0,0.2);\
+        }\
+        #spenibus_videoLinks > div > div a:hover {\
+            color:#940;\
         }\
         #spenibus_videoLinks > div {\
             display:table-row;\
@@ -116,8 +125,15 @@ function videoLinks() {
             display:table-cell;\
         }\
     ');
+
+    let boxLog = SGL.displayBox('spenibus_GmYtLog');
+    boxLog.set('');
+
     let boxMsg = SGL.displayBox('spenibus_GmYtMsg');
+    boxMsg.set('');
+
     let box    = SGL.displayBox('spenibus_videoLinks');
+    box.set('');
 
 
     //**************************************************************************
@@ -132,6 +148,7 @@ function videoLinks() {
         'author'         : '',
         'title'          : '',
         'titleFmt'       : '',
+        'streamingData'  : {},
         'sigDecode'      : function(){return 'nosig';},
         'mimeToExt'      : {
             'video/3gpp'  : '3gp',
@@ -148,8 +165,32 @@ function videoLinks() {
 
 
     //**************************************************************************
+    let processingStep = function(str){
+        let node  = document.createElement('div');
+
+        let state = document.createElement('span');
+        node.appendChild(state);
+        state.innerHTML = '.... ';
+
+        let msg   = document.createElement('span');
+        node.appendChild(msg);
+        msg.innerHTML = str;
+
+        boxLog.node.appendChild(node);
+
+        return {
+            node  : node,
+            state : state,
+            msg   : msg,
+            done  : function(){state.innerHTML = 'done ';},
+        };
+    };
+
+
+    //**************************************************************************
     let videoIdGet = function(){
-        box.set('Fetching videoId');
+        //box.set('Fetching videoId');
+        let step = processingStep('Fetching videoId');
 
         let m = location.href.match(/[&\?]v=(.*?)($|&)/);
         let tmp = SGL.getDeepProp(m, '1');
@@ -158,12 +199,15 @@ function videoLinks() {
             data.videoId = tmp;
             SGL.fireEvent('videoIdReady');
         }
+
+        step.done();
     };
 
 
     //************************************************* get config, always fresh
     let configGet = function(){
-        box.set('Fetching config');
+        //box.set('Fetching config');
+        let step = processingStep('Fetching config');
 
         SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
 
@@ -190,13 +234,16 @@ function videoLinks() {
             data.ytplayer
                 ? SGL.fireEvent('configReady')
                 : box.set('config not found');
+
+            step.done();
         });
     };
 
 
     //**************************************************************************
     let configPlaylistGet = function(){
-        box.set('Fetching config playlist');
+        //box.set('Fetching config playlist');
+        let step = processingStep('Fetching config playlist');
 
         SGL.getUrl('https://www.youtube.com/list_ajax?style=json&action_get_templist=1&video_ids='+data.videoId, xhr=>{
 
@@ -210,6 +257,8 @@ function videoLinks() {
             else {
                 box.set('config extra not found');
             }
+
+            step.done();
         });
     };
 
@@ -222,18 +271,28 @@ function videoLinks() {
     // https://www.quora.com/How-can-I-make-a-YouTube-video-downloader-web-application-from-scratch
     // https://github.com/rg3/youtube-dl/blob/9dd8e46a2d0860421b4bb4f616f05e5ebd686380/youtube_dl/extractor/youtube.py#L625
     let sigDecodeGet = function(){
-        box.set('Fetching sigDecode');
+        //box.set('Fetching sigDecode');
+        let step        = processingStep('Fetching sigDecode');
+        let stepAssets  = processingStep(' - Fetching assets');
+        let stepCipher  = processingStep(' - Fetching cipher');
+        let stepDecoder = processingStep(' - Fetching decoder');
 
         // get assets source
         SGL.getUrl(data.ytplayer.config.assets.js, xhr=>{
 
+
             let content = xhr.responseText;
 
             // get vars declaration
-            let m = content.match(/{var window=this;var ([\s\S]*?);/)
+            let m = content.match(/window=this;[^]*?var\s*([a-z0-9_\$\s,]+);/i)
+            //console.log(content);
+            //console.log(m);
+
             if(!m){
                 return 0;
             }
+
+            stepAssets.done();
 
             // move vars declaration outside the IIFE
             // return them in an array so we can access them easily
@@ -278,6 +337,8 @@ function videoLinks() {
                         );
                     }catch(e){}
 
+                    //console.log(items);
+
                     // parse
                     let list = [];
                     for(let k in items) {
@@ -285,8 +346,8 @@ function videoLinks() {
                             list = list.concat(items[k].split(','));
                         }
                     }
+                    //console.log(list);
 
-                    data.streamingData = {};
                     list.forEach(item=>{
                         //console.log(item);
                         let args = {};
@@ -298,6 +359,7 @@ function videoLinks() {
                         //data.streamingData.push(args);
                         data.streamingData[args['itag']] = args;
                     });
+                    stepCipher.done();
                 }
 
 
@@ -305,8 +367,8 @@ function videoLinks() {
                 if(
                     sigDecodePending
                     && f
-                    //&& f.length == 1
-                    //&& !f.toString().match(/(split|join).*(split|join)/)
+                    && f.length == 1
+                    && f.toString().match(/(split|join).*(split|join)/)
                 ) {
 
                     // test the func
@@ -319,10 +381,11 @@ function videoLinks() {
                         // is a string
                         typeof output === 'string'
                         // is different from the source sig and does not contain it
-                        && !output != sigSrc
+                        //&& !output != sigSrc
                         && output.indexOf(sigSrc) == -1
                         // matches the sig format
                         && output.match(/^.{90,110}$/)
+                        //&& !output.match(/http/)
                         //&& output.match(/^[A-Z\d]{30,50}\.[A-Z\d]{30,50}$/)
                     ) {
                         //console.log(output);
@@ -331,6 +394,7 @@ function videoLinks() {
                             return f.apply(this, arguments);
                         };
                         sigDecodePending = false;
+                        stepDecoder.done();
                     }
                 }
             }
@@ -345,13 +409,16 @@ function videoLinks() {
                 boxMsg.append('<span style="color:#F00" title="urls not decoded">&#x26A0;</span>');
             }
             SGL.fireEvent('sigDecodeReady');
+
+            step.done();
         });
     };
 
 
     //**************************************************************************
     let durationGet = function(){
-        box.set('Fetching duration');
+        //box.set('Fetching duration');
+        let step = processingStep('Fetching duration');
 
         let tmp = SGL.getDeepProp(data, 'ytplayer.config.args.player_response.videoDetails.lengthSeconds');
         if(tmp) {
@@ -365,12 +432,15 @@ function videoLinks() {
 
         data.durationFmt = ('0'+h).slice(-2)+':'+('0'+m).slice(-2)+':'+('0'+s).slice(-2);
         SGL.fireEvent('durationFmtReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let createdGet = function(){
-        box.set('Fetching created');
+        //box.set('Fetching created');
+        let step = processingStep('Fetching created');
 
         let tmp = SGL.getDeepProp(data, 'configPlaylist.time_created');
 
@@ -384,12 +454,15 @@ function videoLinks() {
             ,(new Date(data.created * 1000))
         )+'-UTC';
         SGL.fireEvent('createdFmtReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let authorGet = function(){
-        box.set('Fetching author');
+        //box.set('Fetching author');
+        let step = processingStep('Fetching author');
 
         let tmp = SGL.getDeepProp(data, 'configPlaylist.author');
 
@@ -397,12 +470,15 @@ function videoLinks() {
             data.author = tmp;
         }
         SGL.fireEvent('authorReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let titleGet = function(){
-        box.set('Fetching title');
+        //box.set('Fetching title');
+        let step = processingStep('Fetching title');
 
         let tmp = SGL.getDeepProp(data, 'configPlaylist.title');
 
@@ -410,12 +486,15 @@ function videoLinks() {
             data.title = tmp;
         }
         SGL.fireEvent('titleReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let titleBuild = function(){
-        box.set('Building title');
+        //box.set('Building title');
+        let step = processingStep('Building title');
 
         let tmp = data.author + ' - ' + data.createdFmt + ' - ' + data.title;
 
@@ -428,12 +507,15 @@ function videoLinks() {
         data.titleFmt = tmp;
 
         SGL.fireEvent('titleFmtReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let itagResolutionBuild = function(){
-        box.set('Building itag resolutions');
+        //box.set('Building itag resolutions');
+        let step = processingStep('Building itag resolutions');
 
         let tmp = SGL.getDeepProp(data, 'ytplayer.config.args.fmt_list');
         //console.log(data);
@@ -445,12 +527,15 @@ function videoLinks() {
             });
         }
         SGL.fireEvent('itagResolutionReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let itemsBuild = function(){
-        box.set('Building items');
+        //box.set('Building items');
+        let step = processingStep('Building items');
 
         // item model
         let itemModel = function() {
@@ -464,6 +549,8 @@ function videoLinks() {
             this.signed     = false;
             this.dashWarn   = false;
         }
+
+        //console.log(data.streamingData);
 
         // build a common source for items from fmt_stream_map and adaptive fmts
         Array().concat(
@@ -532,12 +619,15 @@ function videoLinks() {
         });
 
         SGL.fireEvent('itemsReady');
+
+        step.done();
     };
 
 
     //**************************************************************************
     let htmlBuild = function(){
-        box.set('Building html');
+        //box.set('Building html');
+        let step = processingStep('Building html');
 
         data.items.forEach(item=>{
 
@@ -583,6 +673,9 @@ function videoLinks() {
         );
 
         SGL.fireEvent('htmlReady');
+
+        step.done();
+        boxLog.set('all done');
     };
 
 
