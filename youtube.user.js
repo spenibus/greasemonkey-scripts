@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20200104.2019
+// @version     20200405.1519
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -223,6 +223,7 @@ function videoLinks() {
             for(let script of scripts) {
                 if(script.innerHTML.match(pattern)) {
                     let ytplayer;
+                    let yt;
                     eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
 
                     data.ytplayer = ytplayer;
