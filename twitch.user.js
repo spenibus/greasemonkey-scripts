@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20200417.1804
+// @version     20200417.1812
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -528,12 +528,9 @@ function live() {
         vars.sig   = token.sig;
 
         // build playlist url
-        vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8'
-            +'?allow_source=true'
+        vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8?'
             +'&sig='+escape(vars.sig)
-            +'&token='+escape(vars.token)
-            +'&allow_source=true'
-            +'&playlist_include_framerate=true';
+            +'&token='+escape(vars.token);
 
         // get playlist
         getUrl(
@@ -900,7 +897,8 @@ function archives() {
         data.vodUrl = 'http://usher.twitch.tv/vod/'+data.vodId
             +'?nauthsig='+data.sig
             +'&nauth='+encodeURIComponent(data.accessToken)
-            +'&playlist_include_framerate=true';
+            +'&playlist_include_framerate=true'
+            +'&allow_source=true';
 
         GM_xmlhttpRequest({
             method  : 'GET',
