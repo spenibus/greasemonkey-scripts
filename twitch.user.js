@@ -3,7 +3,7 @@
 // @namespace   greasemonkey@spenibus
 // @include     http*://twitch.tv/*
 // @include     http*://*.twitch.tv/*
-// @version     20200417.1816
+// @version     20200606.2015
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -64,13 +64,14 @@ if handler function is missing, sync mode is enabled
 function getUrl(url, handler=null) {
 
     // no handler supplied, use sync mode
-    var syncMode = (handler == null) ? true : false;
+    let syncMode = (handler == null) ? true : false;
 
-    var params = {
+    let params = {
         url      : url
         ,method  : 'GET'
         ,headers : {
-            'Client-ID' : cfg.clientId
+            'Client-ID' : cfg.clientId,
+            'Accept'    : 'application/vnd.twitchtv.v5+json',
         }
         ,onload  : handler
     }
@@ -358,10 +359,11 @@ function live() {
 
     //**************************************************************** some vars
     var vars = {
-        channel : getChannel(),
-        isLive  : 0, // 0: checking (unknown); 1: yes; 2: no
-        viewers : 0,
-        quality : {
+        channel   : getChannel(),
+        channelid : 0,
+        isLive    : 0, // 0: checking (unknown); 1: yes; 2: no
+        viewers   : 0,
+        quality   : {
             'high'   : '720p',
             'medium' : '480p',
             'low'    : '360p',
@@ -456,17 +458,35 @@ function live() {
     livePresent('init live');
 
 
-    //************************************ start chain reaction: get live status
+    //************************************* start chain reaction: get channel id
+    // should move this elsewhere so that channel id can be available everywhere
     (function(){
 
         getUrl(
-            'https://api.twitch.tv/kraken/streams/'+vars.channel
+            'https://api.twitch.tv/kraken/users?login='+vars.channel
+            ,getStreamHandler
+        );
+
+        //box.set('checking live status');
+        livePresent('fetching channel id');
+    })();
+
+
+    //******************************************************* get stream handler
+    function getStreamHandler(xhr) {
+
+        let content = JSON.parse(xhr.responseText);
+
+        vars.channelid = content.users[0]._id;
+
+        getUrl(
+            'https://api.twitch.tv/kraken/streams/'+vars.channelid
             ,liveHandler
         );
 
         //box.set('checking live status');
         livePresent('checking live status');
-    })();
+    }
 
 
     //************************************************************* live handler
@@ -528,7 +548,7 @@ function live() {
         vars.sig   = token.sig;
 
         // build playlist url
-        vars.playlistUrl = 'http://usher.twitch.tv/api/channel/hls/'+vars.channel+'.m3u8?'
+        vars.playlistUrl = 'http://usher.ttvnw.net/api/channel/hls/'+vars.channel+'.m3u8?'
             +'&sig='+escape(vars.sig)
             +'&token='+escape(vars.token)
             +'&allow_source=true';
