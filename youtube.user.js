@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20200405.1519
+// @version     20201018.0023
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -597,8 +597,17 @@ function videoLinks() {
                 ? src.audioChannels
                 : 0;
 
-            item.url = src.url;
-            item.url += '&rbuf=4194304';
+            // 2020-10-18 - some data has been relocated
+            if(src.signatureCipher) {
+                src.signatureCipher.split('&').forEach(s=>{
+                    s = s.split('=')
+                    if(['s','sp','url'].includes(s[0])) {
+                        src[s[0]] = decodeURIComponent((s[1]));
+                    }
+                });
+            }
+
+            item.url = src.url + '&rbuf=4194304';
 
             // add signature
             if(src.s) {
