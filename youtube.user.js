@@ -600,7 +600,7 @@ function videoLinks() {
             // 2020-10-18 - some data has been relocated
             if(src.signatureCipher) {
                 src.signatureCipher.split('&').forEach(s=>{
-                    s = s.split('=')
+                    s = s.split('=');
                     if(['s','sp','url'].includes(s[0])) {
                         src[s[0]] = decodeURIComponent((s[1]));
                     }
