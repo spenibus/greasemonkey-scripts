@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20201018.0023
+// @version     20201031.1950
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -279,7 +279,7 @@ function videoLinks() {
         let stepDecoder = processingStep(' - Fetching decoder');
 
         // get assets source
-        SGL.getUrl(data.ytplayer.config.assets.js, xhr=>{
+        SGL.getUrl(data.ytplayer.web_player_context_config.jsUrl, xhr=>{
 
 
             let content = xhr.responseText;
@@ -600,7 +600,7 @@ function videoLinks() {
             // 2020-10-18 - some data has been relocated
             if(src.signatureCipher) {
                 src.signatureCipher.split('&').forEach(s=>{
-                    s = s.split('=');
+                    s = s.split('=')
                     if(['s','sp','url'].includes(s[0])) {
                         src[s[0]] = decodeURIComponent((s[1]));
                     }
