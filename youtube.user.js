@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20201031.1950
+// @version     20201204.2129
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -209,35 +209,14 @@ function videoLinks() {
         //box.set('Fetching config');
         let step = processingStep('Fetching config');
 
-        SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
 
-            let content = xhr.responseText;
+        data.ytplayer = unsafeWindow.ytplayer;
+        data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
+        data.ytplayer
+            ? SGL.fireEvent('configReady')
+            : box.set('config not found');
 
-            // get DOM from data
-            let dom = (new DOMParser()).parseFromString(content, "text/html");
-
-            let scripts = dom.querySelectorAll('script:not([src])')
-
-            let pattern = /var\s*(ytplayer)/;
-
-            for(let script of scripts) {
-                if(script.innerHTML.match(pattern)) {
-                    let ytplayer;
-                    let yt;
-                    eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
-
-                    data.ytplayer = ytplayer;
-                    data.ytplayer.config.args.player_response = JSON.parse(data.ytplayer.config.args.player_response);
-                    break;
-                }
-            }
-
-            data.ytplayer
-                ? SGL.fireEvent('configReady')
-                : box.set('config not found');
-
-            step.done();
-        });
+        step.done();
     };
 
 
