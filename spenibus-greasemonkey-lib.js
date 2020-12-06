@@ -18,7 +18,7 @@ var spenibus_greasemonkey_lib = {
 
 
     // lib version
-    version : 20191015.2011,
+    version : 20201206.0100,
     cfg : {
         displayBoxContainerId : 'spenibus_display_box_container',
         genericBoxClass       : 'spenibus_generic_box',
@@ -750,7 +750,7 @@ var spenibus_greasemonkey_lib = {
                     string: 'books.0.title'
                      array: ['books',0,'title']
     ***/
-    getDeepProp : function(target, path){
+    getDeepProp : function(target, path, def=undefined){
 
         if(typeof path === 'string') {
             path = path.split('.');
@@ -760,13 +760,13 @@ var spenibus_greasemonkey_lib = {
 
         for(let key of path) {
 
-            if(!prop) {
+            if(prop === undefined) {
                 break;
             }
 
             prop = prop[key];
         }
-        return prop;
+        return (prop !== undefined) ? prop : def;
     },
 };
 

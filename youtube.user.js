@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20201204.2129
+// @version     20201206.0100
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -209,7 +209,82 @@ function videoLinks() {
         //box.set('Fetching config');
         let step = processingStep('Fetching config');
 
+        if(unsafeWindow.ytplayer.config.args.raw_player_response) {
+            data.ytplayer = unsafeWindow.ytplayer;
+            data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
+        }
+        else {
+            SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
+                let content = xhr.responseText;
+                // get DOM from data
+                let dom = (new DOMParser()).parseFromString(content, "text/html");
+                let scripts = dom.querySelectorAll('script:not([src])')
+                let pattern = /var\s*(ytplayer)/;
+                for(let script of scripts) {
+                    if(script.innerHTML.match(pattern)) {
+                        let ytplayer;
+                        eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
+                        data.ytplayer = ytplayer;
+                        data.ytplayer.config.args.player_response = JSON.parse(data.ytplayer.config.args.player_response);
+                        break;
+                    }
+                }
 
+                data.ytplayer
+                    ? SGL.fireEvent('configReady')
+                    : box.set('config not found');
+
+                step.done();
+            });
+
+        }
+
+
+
+
+/*
+        SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
+
+
+            let content = xhr.responseText;
+        data.ytplayer = unsafeWindow.ytplayer;
+
+        data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
+            // get DOM from data
+        data.ytplayer
+            let dom = (new DOMParser()).parseFromString(content, "text/html");
+            ? SGL.fireEvent('configReady')
+
+            : box.set('config not found');
+            let scripts = dom.querySelectorAll('script:not([src])')
+
+            let pattern = /var\s*(ytplayer)/;
+
+            for(let script of scripts) {
+                if(script.innerHTML.match(pattern)) {
+                    let ytplayer;
+                    let yt;
+                    eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
+
+                    data.ytplayer = ytplayer;
+                    data.ytplayer.config.args.player_response = JSON.parse(data.ytplayer.config.args.player_response);
+                    break;
+                }
+            }
+
+            data.ytplayer
+                ? SGL.fireEvent('configReady')
+                : box.set('config not found');
+
+
+            step.done();
+        step.done();
+        });
+*/
+
+
+return
+console.log(unsafeWindow.ytplayer)
         data.ytplayer = unsafeWindow.ytplayer;
         data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
         data.ytplayer
@@ -533,10 +608,11 @@ function videoLinks() {
         //console.log(data.streamingData);
 
         // build a common source for items from fmt_stream_map and adaptive fmts
-        Array().concat(
-            SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats')
-            ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats')
-        ).forEach(item=>{
+        let z = Array().concat(
+             SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.formats'        , [])
+            ,SGL.getDeepProp(data, 'ytplayer.config.args.player_response.streamingData.adaptiveFormats', [])
+        )
+        .forEach(item=>{
             data.streamingData[item['itag']]
                 ? data.streamingData[item['itag']] = {...data.streamingData[item['itag']], ...item}
                 : data.streamingData[item['itag']] = item;
