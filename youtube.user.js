@@ -4,7 +4,7 @@
 // @updateURL   https://github.com/spenibus/greasemonkey-scripts/raw/master/youtube.user.js
 // @include     http*://youtube.com/*
 // @include     http*://*.youtube.com/*
-// @version     20201206.0109
+// @version     20201206.0123
 // @require     spenibus-greasemonkey-lib.js
 // @grant       unsafeWindow
 // @grant       GM_xmlhttpRequest
@@ -212,6 +212,7 @@ function videoLinks() {
         if(unsafeWindow.ytplayer.config.args.raw_player_response) {
             data.ytplayer = unsafeWindow.ytplayer;
             data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
+            configGetCheck(step);
         }
         else {
             SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
@@ -226,18 +227,22 @@ function videoLinks() {
                         eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
                         data.ytplayer = ytplayer;
                         data.ytplayer.config.args.player_response = JSON.parse(data.ytplayer.config.args.player_response);
+                        configGetCheck(step);
                         break;
                     }
                 }
             });
         }
+    };
 
+
+    //*************************************************** check result of config
+    let configGetCheck = function(step){
         data.ytplayer
             ? SGL.fireEvent('configReady')
             : box.set('config not found');
-            
         step.done();
-    };
+    }
 
 
     //**************************************************************************
