@@ -229,68 +229,13 @@ function videoLinks() {
                         break;
                     }
                 }
-
-                data.ytplayer
-                    ? SGL.fireEvent('configReady')
-                    : box.set('config not found');
-
-                step.done();
             });
-
         }
 
-
-
-
-/*
-        SGL.getUrl('https://www.youtube.com/watch?v='+data.videoId, xhr=>{
-
-
-            let content = xhr.responseText;
-        data.ytplayer = unsafeWindow.ytplayer;
-
-        data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
-            // get DOM from data
-        data.ytplayer
-            let dom = (new DOMParser()).parseFromString(content, "text/html");
-            ? SGL.fireEvent('configReady')
-
-            : box.set('config not found');
-            let scripts = dom.querySelectorAll('script:not([src])')
-
-            let pattern = /var\s*(ytplayer)/;
-
-            for(let script of scripts) {
-                if(script.innerHTML.match(pattern)) {
-                    let ytplayer;
-                    let yt;
-                    eval('{'+script.innerHTML.replace(pattern, '$1')+'}');
-
-                    data.ytplayer = ytplayer;
-                    data.ytplayer.config.args.player_response = JSON.parse(data.ytplayer.config.args.player_response);
-                    break;
-                }
-            }
-
-            data.ytplayer
-                ? SGL.fireEvent('configReady')
-                : box.set('config not found');
-
-
-            step.done();
-        step.done();
-        });
-*/
-
-
-return
-console.log(unsafeWindow.ytplayer)
-        data.ytplayer = unsafeWindow.ytplayer;
-        data.ytplayer.config.args.player_response = data.ytplayer.config.args.raw_player_response;
         data.ytplayer
             ? SGL.fireEvent('configReady')
             : box.set('config not found');
-
+            
         step.done();
     };
 
